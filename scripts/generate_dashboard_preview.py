@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 from html import escape
 from pathlib import Path
@@ -13,6 +14,8 @@ import duckdb
 
 DEFAULT_DATABASE = Path("data/warehouse/health_equity.duckdb")
 DEFAULT_TARGET_DIR = Path("dbt_transforms/target")
+DEFAULT_QUARANTINE_DIR = Path("data/quarantine")
+DEFAULT_DECISIONS_PATH = Path("reports/gold_promotion_decisions.jsonl")
 DEFAULT_OUTPUT_PATH = Path("dashboards/static_preview.html")
 PROJECT_AUTHOR = "Ryan Johnson"
 PROJECT_ROLE = "Healthcare data platform builder"
@@ -74,6 +77,29 @@ def status_pill(text: str, tone: str) -> str:
     return f'<span class="pill pill-{escape(tone)}">{escape(text)}</span>'
 
 
+def patient_token(value: Any) -> str:
+    if not value:
+        return "not present"
+    normalized = str(value).replace("Patient/", "")
+    return "PAT-" + hashlib.sha256(normalized.encode("utf-8")).hexdigest()[:10].upper()
+
+
+def a1c_band(value: Any) -> str:
+    if value is None:
+        return "missing"
+    try:
+        numeric_value = float(value)
+    except (TypeError, ValueError):
+        return "not numeric"
+    if numeric_value < 7:
+        return "<7"
+    if numeric_value < 8:
+        return "7-7.9"
+    if numeric_value < 9:
+        return "8-8.9"
+    return "9+"
+
+
 def display_source_label(source_system: Any) -> str:
     labels = {
         "epic_simulated": "Epic-style FHIR feed*",
@@ -81,6 +107,67 @@ def display_source_label(source_system: Any) -> str:
         "legacy_pms_simulated": "Legacy PMS export*",
     }
     return labels.get(str(source_system), str(source_system))
+
+
+def mask_failed_payload(payload: dict[str, Any]) -> dict[str, Any]:
+    masked = json.loads(json.dumps(payload))
+    if "id" in masked:
+        masked["id"] = patient_token(masked["id"])
+    if "subject" in masked and isinstance(masked["subject"], dict):
+        reference = masked["subject"].get("reference")
+        if reference:
+            masked["subject"]["reference"] = patient_token(reference)
+    if "name" in masked:
+        masked["name"] = "[removed]"
+    if "telecom" in masked:
+        masked["telecom"] = "[removed]"
+    if "address" in masked:
+        masked["address"] = "[generalized]"
+    value_quantity = masked.get("valueQuantity")
+    if isinstance(value_quantity, dict) and "value" in value_quantity:
+        value_quantity["value"] = a1c_band(value_quantity.get("value"))
+        value_quantity["masking_note"] = "numeric value bucketed for review"
+    return masked
+
+
+def failed_record_rows(quarantine_dir: Path, decisions_path: Path) -> list[tuple[str, str, str, str, str, str, str]]:
+    decisions: dict[str, str] = {}
+    if decisions_path.exists():
+        with decisions_path.open("r", encoding="utf-8") as file:
+            for line in file:
+                if line.strip():
+                    row = json.loads(line)
+                    decisions[str(row.get("issue_id"))] = str(row.get("decision", "review_required"))
+
+    rows: list[tuple[str, str, str, str, str, str, str]] = []
+    for path in sorted(quarantine_dir.glob("*/quarantine.ndjson")):
+        with path.open("r", encoding="utf-8") as file:
+            for line_number, line in enumerate(file, start=1):
+                if not line.strip():
+                    continue
+                row = json.loads(line)
+                raw_payload = row.get("raw_payload", "")
+                try:
+                    payload = json.loads(raw_payload)
+                except json.JSONDecodeError:
+                    payload = {"unparsed_payload": raw_payload}
+                source_system = str(row.get("source_system", "unknown"))
+                resource_type = str(payload.get("resourceType", "unknown")) if isinstance(payload, dict) else "unknown"
+                resource_id = str(payload.get("id", "missing-id")) if isinstance(payload, dict) else "missing-id"
+                issue_id = f"quarantine-{source_system}-{resource_type}-{line_number}"
+                masked_payload = mask_failed_payload(payload if isinstance(payload, dict) else {"payload": raw_payload})
+                rows.append(
+                    (
+                        issue_id,
+                        display_source_label(source_system),
+                        f"{resource_type}/{resource_id}",
+                        str(row.get("reason", "unknown quarantine reason")),
+                        str(row.get("source_file", path)) + f":{row.get('line_number', line_number)}",
+                        decisions.get(issue_id, "review_required"),
+                        json.dumps(masked_payload, sort_keys=True),
+                    )
+                )
+    return rows
 
 
 def table(headers: list[str], rows: list[tuple[Any, ...]]) -> str:
@@ -104,6 +191,24 @@ def language_bars(rows: list[tuple[Any, ...]]) -> str:
               </div>
               <div class="track"><span style="width: {width}%"></span></div>
               <b>{fmt(missing_rate)}%</b>
+            </div>
+            """
+        )
+    return "".join(items)
+
+
+def age_band_cards(rows: list[tuple[Any, ...]]) -> str:
+    total = sum(int(row[1]) for row in rows) or 1
+    items = []
+    for age_band, patients in rows:
+        percent = pct(int(patients), total)
+        items.append(
+            f"""
+            <div class="age-card">
+              <span>{escape(str(age_band))}</span>
+              <strong>{patients}</strong>
+              <div class="mini-track"><span class="ok" style="width: {percent}%"></span></div>
+              <p>{percent}% of cohort</p>
             </div>
             """
         )
@@ -306,7 +411,33 @@ def patient_rows(rows: list[tuple[Any, ...]]) -> str:
     )
 
 
-def generate(database: Path, target_dir: Path, output_path: Path) -> None:
+def failed_record_table(rows: list[tuple[str, str, str, str, str, str, str]]) -> str:
+    if not rows:
+        return '<p class="footer-note">No quarantined records are active in the latest synthetic run.</p>'
+
+    body_rows = []
+    for issue_id, source_system, resource, reason, evidence, decision, masked_payload in rows:
+        body_rows.append(
+            "<tr>"
+            f"<td><code>{escape(issue_id)}</code></td>"
+            f"<td>{escape(source_system)}</td>"
+            f"<td><code>{escape(resource)}</code></td>"
+            f"<td>{escape(reason)}</td>"
+            f"<td><code>{escape(evidence)}</code></td>"
+            f"<td>{status_pill(decision, 'risk' if decision != 'accept_exception_for_monitoring' else 'ok')}</td>"
+            f"<td><code>{escape(masked_payload)}</code></td>"
+            "</tr>"
+        )
+    return (
+        '<table class="failed-record-table" data-failed-record-table><thead><tr>'
+        "<th>Issue</th><th>Source</th><th>Resource</th><th>Reason</th><th>Evidence</th><th>Gold decision</th><th>Masked failed payload</th>"
+        "</tr></thead><tbody>"
+        + "".join(body_rows)
+        + "</tbody></table>"
+    )
+
+
+def generate(database: Path, target_dir: Path, quarantine_dir: Path, output_path: Path) -> None:
     with duckdb.connect(str(database), read_only=True) as connection:
         source_count = scalar(connection, "select count(distinct source_system) from main_gold.mart_pipeline_reliability")
         cohort_count = scalar(connection, "select count(*) from main_gold.mart_diabetes_care_gaps")
@@ -338,7 +469,31 @@ def generate(database: Path, target_dir: Path, output_path: Path) -> None:
                 round(100.0 * sum(case when is_missing_recent_a1c then 1 else 0 end) / count(*), 1) as missing_rate_pct
             from main_gold.mart_diabetes_care_gaps
             group by 1
-            order by missing_rate_pct desc, patients desc, preferred_language
+            order by
+                case preferred_language
+                    when 'English' then 1
+                    when 'Spanish' then 2
+                    when 'French' then 3
+                    when 'Haitian Creole' then 4
+                    when 'Arabic' then 5
+                    else 99
+                end
+            """,
+        )
+        age_band_rows_result = fetch_rows(
+            connection,
+            """
+            select
+                age_band,
+                count(*) as patients
+            from main_gold.mart_diabetes_care_gaps
+            group by 1
+            order by
+                case age_band
+                    when '18-39' then 1
+                    when '40-64' then 2
+                    else 3
+                end
             """,
         )
         patient_rows_result = fetch_rows(
@@ -386,6 +541,7 @@ def generate(database: Path, target_dir: Path, output_path: Path) -> None:
         )
 
     total_tests, passing_tests, failing_tests = dbt_test_summary(target_dir)
+    failed_rows = failed_record_rows(quarantine_dir, DEFAULT_DECISIONS_PATH)
     missing_rate = pct(missing_count, cohort_count)
     highest_quarantine_rate = highest_quarantine[2] if highest_quarantine else 0.0
     highest_quarantine_note = (
@@ -608,6 +764,13 @@ def generate(database: Path, target_dir: Path, output_path: Path) -> None:
       margin-top: 4px;
       text-align: left;
     }}
+    .monitor-button-primary {{
+      margin: -18px 0 26px;
+      min-height: 44px;
+      border-color: rgba(24, 213, 238, 0.62);
+      background: rgba(24, 213, 238, 0.16);
+      box-shadow: 0 0 26px rgba(24, 213, 238, 0.1);
+    }}
     .monitor-button:hover, .modal-action:hover, .modal-close:hover, .archive-action:hover {{
       border-color: rgba(24, 213, 238, 0.72);
       background: rgba(24, 213, 238, 0.18);
@@ -709,6 +872,27 @@ def generate(database: Path, target_dir: Path, output_path: Path) -> None:
       font-size: 13px;
       font-weight: 800;
       margin-top: 18px;
+    }}
+    .hero-actions {{
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      margin-top: 18px;
+    }}
+    .hero-action {{
+      border: 1px solid rgba(24, 213, 238, 0.48);
+      border-radius: 8px;
+      background: rgba(24, 213, 238, 0.14);
+      color: #d7fbff;
+      cursor: pointer;
+      font: inherit;
+      font-weight: 900;
+      min-height: 42px;
+      padding: 9px 13px;
+    }}
+    .hero-action:hover {{
+      border-color: rgba(24, 213, 238, 0.78);
+      background: rgba(24, 213, 238, 0.21);
     }}
     .view-tabs {{
       display: grid;
@@ -916,6 +1100,37 @@ def generate(database: Path, target_dir: Path, output_path: Path) -> None:
       color: var(--muted);
       font-size: 13px;
     }}
+    .age-grid {{
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 10px;
+      margin-top: 14px;
+    }}
+    .age-card {{
+      border: 1px solid var(--line-soft);
+      border-radius: 8px;
+      background: #09101a;
+      padding: 12px;
+    }}
+    .age-card span {{
+      display: block;
+      color: var(--muted);
+      font-size: 12px;
+      font-weight: 800;
+      margin-bottom: 5px;
+      text-transform: uppercase;
+    }}
+    .age-card strong {{
+      display: block;
+      color: var(--text);
+      font-size: 26px;
+      line-height: 1;
+      margin-bottom: 10px;
+    }}
+    .age-card p {{
+      margin-top: 7px;
+      font-size: 12px;
+    }}
     .trace-dashboard {{
       display: grid;
       gap: 14px;
@@ -1000,6 +1215,11 @@ def generate(database: Path, target_dir: Path, output_path: Path) -> None:
     .trace-table code {{
       white-space: normal;
       overflow-wrap: anywhere;
+    }}
+    .failed-record-table code {{
+      white-space: normal;
+      overflow-wrap: anywhere;
+      font-size: 12px;
     }}
     .pill {{
       display: inline-flex;
@@ -1503,7 +1723,7 @@ def generate(database: Path, target_dir: Path, output_path: Path) -> None:
       .bar-row, .reliability-row {{
         grid-template-columns: 1fr;
       }}
-      .trace-summary, .trace-row {{
+      .trace-summary, .trace-row, .age-grid {{
         grid-template-columns: 1fr;
       }}
     }}
@@ -1519,6 +1739,7 @@ def generate(database: Path, target_dir: Path, output_path: Path) -> None:
           <span>FHIR data platform</span>
         </div>
       </div>
+      <button class="monitor-button monitor-button-primary" type="button" data-open-monitor>Open pipeline monitor</button>
 
       <section class="side-section">
         <div class="side-label">System overview</div>
@@ -1533,7 +1754,6 @@ def generate(database: Path, target_dir: Path, output_path: Path) -> None:
         <div class="side-pill"><span>Quarantine gate</span><b>on</b></div>
         <div class="side-pill"><span>dbt tests</span><b>{passing_tests}/{total_tests}</b></div>
         <div class="side-pill"><span>Cloud required</span><b>no</b></div>
-        <button class="monitor-button" type="button" data-open-monitor>Open pipeline monitor</button>
       </section>
 
       <section class="side-section">
@@ -1554,6 +1774,10 @@ def generate(database: Path, target_dir: Path, output_path: Path) -> None:
         <h1>FHIR Health Equity Pipeline</h1>
         <p class="hero-copy">Synthetic clinical records are routed, validated, transformed, tested, and surfaced as health-equity and pipeline reliability analytics. This view is generated from the local DuckDB gold marts after the demo run.</p>
         <div class="disclaimer">Synthetic data only - no real patient records or real EHR integrations</div>
+        <div class="hero-actions">
+          <button class="hero-action" type="button" data-open-monitor>Open pipeline monitor</button>
+          <button class="hero-action" type="button" data-hero-view="detail">View detailed records</button>
+        </div>
       </section>
 
       <nav class="view-tabs" aria-label="Dashboard views">
@@ -1606,6 +1830,20 @@ def generate(database: Path, target_dir: Path, output_path: Path) -> None:
         <section class="panel" data-view-section="detail">
           <h2>Care Gaps by Preferred Language</h2>
           {language_bars(language_rows_result)}
+        </section>
+
+        <section class="panel" data-view-section="detail">
+          <h2>Age Band Distribution</h2>
+          <p>Generated patients are deliberately spread across age bands so segmentation is visible during the demo.</p>
+          <div class="age-grid">
+            {age_band_cards(age_band_rows_result)}
+          </div>
+        </section>
+
+        <section class="panel wide" data-view-section="detail">
+          <h2>Quarantined Record Detail and Masking</h2>
+          <p>Individual failed records stay out of gold marts, retain evidence for stewardship, and expose a masked preview for review workflows.</p>
+          {failed_record_table(failed_rows)}
         </section>
 
         <section class="panel" data-view-section="process detail">
@@ -1666,6 +1904,7 @@ def generate(database: Path, target_dir: Path, output_path: Path) -> None:
             </div>
           </div>
         </section>
+
       </section>
 
       <footer class="portfolio-footer" aria-label="Project owner and links">
@@ -2075,7 +2314,13 @@ def generate(database: Path, target_dir: Path, output_path: Path) -> None:
         if (!payload.ok) {{
           throw new Error(payload.failed_command || "local load failed");
         }}
-        log.textContent = `${{new Date().toLocaleTimeString()}} real load complete: load #${{payload.load_number}}, ${{payload.patient_count}} synthetic patients. Refresh this page to view regenerated marts and reports.`;
+        log.textContent = `${{new Date().toLocaleTimeString()}} real load complete: load #${{payload.load_number}}, ${{payload.patient_count}} synthetic patients, variation seed ${{payload.variation_seed}}. Reloading refreshed dashboard artifacts.`;
+        const nextUrl = new URL("/dashboards/static_preview.html", window.location.origin);
+        nextUrl.searchParams.set("view", "process");
+        nextUrl.searchParams.set("health", "closed");
+        nextUrl.searchParams.set("load", String(payload.load_number));
+        nextUrl.searchParams.set("t", String(Date.now()));
+        window.location.href = nextUrl.toString();
       }} catch (error) {{
         log.textContent = `${{new Date().toLocaleTimeString()}} real load unavailable: start the local server with 'uv run python -m scripts.dashboard_control_server', then open http://127.0.0.1:8765/. Detail: ${{error.message}}`;
       }} finally {{
@@ -2084,7 +2329,12 @@ def generate(database: Path, target_dir: Path, output_path: Path) -> None:
       }}
     }}
 
-    document.querySelector("[data-open-monitor]").addEventListener("click", openMonitorModal);
+    document.querySelectorAll("[data-open-monitor]").forEach((button) => {{
+      button.addEventListener("click", openMonitorModal);
+    }});
+    document.querySelectorAll("[data-hero-view]").forEach((button) => {{
+      button.addEventListener("click", () => setDashboardView(button.getAttribute("data-hero-view")));
+    }});
     document.querySelector("[data-close-monitor]").addEventListener("click", () => {{
       modal.classList.remove("open");
       modal.setAttribute("aria-hidden", "true");
@@ -2134,13 +2384,14 @@ def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Generate a static HTML dashboard preview from DuckDB gold marts.")
     parser.add_argument("--database", type=Path, default=DEFAULT_DATABASE)
     parser.add_argument("--target-dir", type=Path, default=DEFAULT_TARGET_DIR)
+    parser.add_argument("--quarantine-dir", type=Path, default=DEFAULT_QUARANTINE_DIR)
     parser.add_argument("--output-path", type=Path, default=DEFAULT_OUTPUT_PATH)
     return parser.parse_args()
 
 
 def main() -> None:
     args = parse_args()
-    generate(args.database, args.target_dir, args.output_path)
+    generate(args.database, args.target_dir, args.quarantine_dir, args.output_path)
     print(f"Wrote dashboard preview to {args.output_path}")
 
 

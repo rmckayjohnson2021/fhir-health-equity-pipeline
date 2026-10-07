@@ -5,6 +5,7 @@ param(
     [string]$ChaosScenario = "none",
     [double]$TraceDelaySeconds = 0.05,
     [int]$PatientCount = 60,
+    [int]$VariationSeed = 0,
     [int]$BatchSize = 20,
     [double]$DelaySeconds = 1.0
 )
@@ -15,6 +16,8 @@ $ErrorActionPreference = "Stop"
 $batchArgs = @("-m", "scripts.run_batch_demo")
 $batchArgs += "--patient-count"
 $batchArgs += $PatientCount.ToString([Globalization.CultureInfo]::InvariantCulture)
+$batchArgs += "--variation-seed"
+$batchArgs += $VariationSeed.ToString([Globalization.CultureInfo]::InvariantCulture)
 $batchArgs += "--batch-size"
 $batchArgs += $BatchSize.ToString([Globalization.CultureInfo]::InvariantCulture)
 $batchArgs += "--delay-seconds"

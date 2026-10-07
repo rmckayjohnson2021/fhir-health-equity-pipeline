@@ -22,7 +22,7 @@ from scripts.fhir_version_policy import (
 
 ROOT = Path(__file__).resolve().parents[1]
 STATE_PATH = ROOT / "data" / "work" / "dashboard_control_state.json"
-LOAD_STEPS = (60, 120, 180, 240)
+LOAD_STEPS = (120, 180, 240, 300)
 
 
 def run_command(command: list[str], cwd: Path = ROOT) -> dict[str, Any]:
@@ -58,6 +58,7 @@ def next_patient_count() -> tuple[int, int]:
 
 def run_synthetic_load(batch_size: int, delay_seconds: float) -> dict[str, Any]:
     patient_count, load_number = next_patient_count()
+    variation_seed = load_number
     commands = [
         [
             "uv",
@@ -67,6 +68,8 @@ def run_synthetic_load(batch_size: int, delay_seconds: float) -> dict[str, Any]:
             "scripts.run_batch_demo",
             "--patient-count",
             str(patient_count),
+            "--variation-seed",
+            str(variation_seed),
             "--batch-size",
             str(batch_size),
             "--delay-seconds",
@@ -95,7 +98,13 @@ def run_synthetic_load(batch_size: int, delay_seconds: float) -> dict[str, Any]:
                 "failed_command": result["command"],
                 "results": results,
             }
-    return {"ok": True, "load_number": load_number, "patient_count": patient_count, "results": results}
+    return {
+        "ok": True,
+        "load_number": load_number,
+        "patient_count": patient_count,
+        "variation_seed": variation_seed,
+        "results": results,
+    }
 
 
 class DashboardControlHandler(SimpleHTTPRequestHandler):
@@ -111,6 +120,10 @@ class DashboardControlHandler(SimpleHTTPRequestHandler):
         self.send_header("Content-Length", str(len(body)))
         self.end_headers()
         self.wfile.write(body)
+
+    def end_headers(self) -> None:
+        self.send_header("Cache-Control", "no-store")
+        super().end_headers()
 
     def read_json_body(self) -> dict[str, Any]:
         length = int(self.headers.get("Content-Length", "0"))

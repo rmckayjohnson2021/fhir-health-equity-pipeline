@@ -124,7 +124,7 @@ Optional local button mode:
 uv run python -m scripts.dashboard_control_server
 ```
 
-Open `http://127.0.0.1:8765/`, click `Open pipeline monitor`, then click `Run next synthetic load`. Each click advances to the next synthetic panel size and refreshes reports and dashboards from the local pipeline.
+Open `http://127.0.0.1:8765/`, click `Open pipeline monitor`, then click `Run next synthetic load`. The first click advances from 60 to 120 synthetic patients; later clicks advance to 180, 240, and 300. Each run applies a deterministic variation seed, refreshes reports and dashboards from the local pipeline, and reloads the served dashboard.
 
 To slow the run down further:
 
@@ -212,6 +212,7 @@ Explain:
 - The `Dismiss all quarantined` action simulates exporting active quarantine records to an archive for later stewardship without changing gold marts.
 - Restart actions are simulated and logged in the browser as an operator workflow.
 - The OpenTelemetry Trace Dashboard panel shows span duration, status, attributes, and the quarantine/error path without a hosted tracing service.
+- Detailed view shows individual quarantined records with masked failed-payload previews for stewardship review.
 - In production, those controls would call an orchestrator or incident runbook instead of restarting directly from a static dashboard.
 
 ### 9. FHIR Mapping Workbench

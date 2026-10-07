@@ -1,6 +1,8 @@
 from pathlib import Path
 import unittest
+from datetime import date
 
+from scripts.dashboard_control_server import LOAD_STEPS
 from scripts.fhir_version_policy import VALID_FHIR_VERSIONS, VALID_POLICY_MODES, default_policy
 from scripts.generate_fhir_mapping_workbench import FHIR_SCHEMA_SUBSET, FORCED_CONVERSION_TARGET_TYPES
 from scripts.generate_synthea_sample import DEFAULT_PATIENT_COUNT, LANGUAGES, SOURCE_SYSTEMS, patient_panel
@@ -21,7 +23,23 @@ class PortfolioContractTests(unittest.TestCase):
         self.assertEqual(source_systems, set(SOURCE_SYSTEMS))
         self.assertSetEqual(language_names, {"English", "Spanish", "French", "Haitian Creole", "Arabic"})
         self.assertSetEqual(language_codes, {"en", "es", "fr", "ht", "ar"})
+        self.assertEqual(patients[0].language_display, "Spanish")
+        self.assertEqual(patients[1].language_display, "English")
+        self.assertEqual(patients[3].language_display, "Spanish")
         self.assertNotIn("Vietnamese", language_names)
+
+        age_years = [date.today().year - int(patient.birth_date[:4]) for patient in patients]
+        self.assertLess(min(age_years), 40)
+        self.assertGreaterEqual(max(age_years), 65)
+
+        baseline_missing = {
+            patient.patient_id for patient in patient_panel(DEFAULT_PATIENT_COUNT, variation_seed=0) if patient.a1c_value is None
+        }
+        varied_missing = {
+            patient.patient_id for patient in patient_panel(DEFAULT_PATIENT_COUNT, variation_seed=1) if patient.a1c_value is None
+        }
+        self.assertNotEqual(baseline_missing, varied_missing)
+        self.assertEqual(LOAD_STEPS[0], 120)
 
     def test_dashboard_contains_operational_controls(self) -> None:
         dashboard = (ROOT / "dashboards" / "static_preview.html").read_text(encoding="utf-8")
@@ -33,6 +51,7 @@ class PortfolioContractTests(unittest.TestCase):
             "View Current State",
             "Open Pipeline Monitor",
             "View Detailed Dashboard",
+            "View detailed records",
             "Current State",
             "What's in process",
             "Detailed view",
@@ -41,6 +60,8 @@ class PortfolioContractTests(unittest.TestCase):
             "Run slow monitor",
             "Run next synthetic load",
             "data-real-load",
+            "variation seed",
+            'new URL("/dashboards/static_preview.html", window.location.origin)',
             "dashboard_control_server",
             "Dismiss all quarantined",
             "quarantine_archive",
@@ -48,6 +69,10 @@ class PortfolioContractTests(unittest.TestCase):
             "OpenTelemetry Trace Dashboard",
             "data-otel-trace-dashboard",
             "data-patient-table",
+            "Quarantined Record Detail and Masking",
+            "data-failed-record-table",
+            "Masked failed payload",
+            "Age Band Distribution",
             "Export CSV",
             "data-start-date",
             "data-end-date",

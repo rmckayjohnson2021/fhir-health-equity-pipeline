@@ -150,10 +150,11 @@ Show:
 Explain:
 
 - The slow monitor simulates a real-time batch run through ingest, transform, quality, and promotion stages.
-- `Run next synthetic load` works when the dashboard is served through `uv run python -m scripts.dashboard_control_server`; it triggers the next local synthetic load and refreshes generated artifacts.
+- `Run next synthetic load` works when the dashboard is served through `uv run python -m scripts.dashboard_control_server`; the first click moves from 60 to 120 synthetic patients, later clicks advance to 180, 240, and 300, each run applies a deterministic variation seed, refreshes generated artifacts, and reloads the served dashboard.
 - Restart actions are browser-side simulations of what would be orchestrator/runbook actions in production.
 - Dismiss all quarantined simulates exporting active quarantine records to an archive for later stewardship and leaves gold marts unchanged.
 - The OpenTelemetry Trace Dashboard turns local span events into a readable waterfall with status, duration, and attributes.
+- Detailed view shows individual quarantined records with masked failed-payload previews.
 
 ## 7. Demonstrate Micro-Batches, Tracing, OpenTelemetry, and Chaos
 

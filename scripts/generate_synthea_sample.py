@@ -11,6 +11,7 @@ import argparse
 import json
 import shutil
 from dataclasses import dataclass
+from datetime import date
 from pathlib import Path
 from typing import Any
 
@@ -26,6 +27,18 @@ LANGUAGES = (
     ("fr", "French"),
     ("ht", "Haitian Creole"),
     ("ar", "Arabic"),
+)
+LANGUAGE_SEQUENCE = (
+    ("en", "English"),
+    ("es", "Spanish"),
+    ("en", "English"),
+    ("es", "Spanish"),
+    ("fr", "French"),
+    ("ht", "Haitian Creole"),
+    ("ar", "Arabic"),
+    ("en", "English"),
+    ("es", "Spanish"),
+    ("fr", "French"),
 )
 POSTAL_CODES = ("60608", "60619", "60644", "60623", "60629", "60632", "60651", "60612")
 
@@ -92,24 +105,27 @@ PATIENTS = (
 )
 
 
-def generated_patient(index: int) -> SyntheticPatient:
+def generated_patient(index: int, variation_seed: int = 0) -> SyntheticPatient:
     source_system = SOURCE_SYSTEMS[(index - 1) % len(SOURCE_SYSTEMS)]
     first_name = FIRST_NAMES[(index - 1) % len(FIRST_NAMES)]
     last_name = LAST_NAMES[((index - 1) * 3) % len(LAST_NAMES)]
-    language_code, language_display = LANGUAGES[((index - 1) * 2) % len(LANGUAGES)]
-    birth_year = 1948 + (index % 47)
+    language_code, language_display = LANGUAGE_SEQUENCE[(index - 1) % len(LANGUAGE_SEQUENCE)]
+    clinical_index = index + variation_seed
+    age_cycle = (24, 29, 34, 38, 43, 49, 56, 62, 67, 73, 79)
+    age_years = age_cycle[(index - 1) % len(age_cycle)]
+    birth_year = date.today().year - age_years
     birth_month = 1 + (index % 12)
     birth_day = 1 + (index % 27)
 
-    if index % 5 == 0:
+    if clinical_index % 5 == 0:
         a1c_value = None
         last_a1c_date = None
     else:
-        a1c_value = round(5.8 + ((index * 7) % 36) / 10, 1)
+        a1c_value = round(5.8 + ((clinical_index * 7) % 36) / 10, 1)
         last_a1c_date = (
-            f"2024-{1 + (index % 12):02d}-{1 + (index % 27):02d}"
-            if index % 4 == 0
-            else f"2026-{1 + (index % 5):02d}-{1 + (index % 27):02d}"
+            f"2024-{1 + (clinical_index % 12):02d}-{1 + (clinical_index % 27):02d}"
+            if clinical_index % 4 == 0
+            else f"2026-{1 + (clinical_index % 5):02d}-{1 + (clinical_index % 27):02d}"
         )
 
     return SyntheticPatient(
@@ -128,13 +144,13 @@ def generated_patient(index: int) -> SyntheticPatient:
     )
 
 
-def patient_panel(patient_count: int) -> tuple[SyntheticPatient, ...]:
+def patient_panel(patient_count: int, variation_seed: int = 0) -> tuple[SyntheticPatient, ...]:
     if patient_count < len(PATIENTS):
         raise ValueError(f"patient_count must be at least {len(PATIENTS)}")
 
     patients = list(PATIENTS)
     for index in range(len(PATIENTS) + 1, patient_count + 1):
-        patients.append(generated_patient(index))
+        patients.append(generated_patient(index, variation_seed))
     return tuple(patients)
 
 
@@ -273,11 +289,11 @@ def write_ndjson(path: Path, records: list[dict[str, Any]]) -> None:
             file.write("\n")
 
 
-def generate_sample(output_dir: Path, patient_count: int = DEFAULT_PATIENT_COUNT) -> None:
+def generate_sample(output_dir: Path, patient_count: int = DEFAULT_PATIENT_COUNT, variation_seed: int = 0) -> None:
     if output_dir.exists():
         shutil.rmtree(output_dir)
 
-    patients = patient_panel(patient_count)
+    patients = patient_panel(patient_count, variation_seed)
     for source_system in SOURCE_SYSTEMS:
         source_records: list[dict[str, Any]] = []
         for patient in patients:
@@ -293,6 +309,7 @@ def generate_sample(output_dir: Path, patient_count: int = DEFAULT_PATIENT_COUNT
         "description": "Deterministic synthetic FHIR-shaped v1 fixture. No real patient data.",
         "source_systems": list(SOURCE_SYSTEMS),
         "patients": len(patients),
+        "variation_seed": variation_seed,
         "intentional_invalid_records": 1,
     }
     write_ndjson(output_dir / "_manifest.ndjson", [manifest])
@@ -302,12 +319,13 @@ def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Generate deterministic synthetic FHIR NDJSON sample data.")
     parser.add_argument("--output-dir", type=Path, default=DEFAULT_OUTPUT_DIR)
     parser.add_argument("--patient-count", type=int, default=DEFAULT_PATIENT_COUNT)
+    parser.add_argument("--variation-seed", type=int, default=0)
     return parser.parse_args()
 
 
 def main() -> None:
     args = parse_args()
-    generate_sample(args.output_dir, args.patient_count)
+    generate_sample(args.output_dir, args.patient_count, args.variation_seed)
     print(f"Generated synthetic FHIR sample under {args.output_dir}")
 
 

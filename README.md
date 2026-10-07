@@ -19,18 +19,18 @@ What to notice:
 - 347 synthetic FHIR resources across 60 synthetic patients.
 - 39 dbt tests across bronze, silver, and gold models.
 - Dashboard views for current health, in-process operations, and detailed patient-level analysis.
-- Pipeline monitor with simulated restart, slow-run, quarantine archive, and event log controls.
+- Pipeline monitor with top-level launch button, simulated restart, slow-run, quarantine archive, deterministic synthetic-load deltas, and event log controls.
 - OpenTelemetry Trace Dashboard showing span status, duration, attributes, and quarantine/error paths.
 - FHIR Mapping Workbench for R4/R4B/R5 mapping decisions and forced-conversion notes.
-- Privacy masking, last-known-good snapshots, unmapped blob provenance, OpenTelemetry-style traces, and chaos injection.
+- Privacy masking, row-level quarantine detail, last-known-good snapshots, unmapped blob provenance, OpenTelemetry-style traces, and chaos injection.
 
 ## Big 5 Showcase Features
 
 1. **Synthetic multi-source FHIR pipeline**: Generates deterministic synthetic FHIR-shaped records, simulates multiple source adapters, validates payloads, lands raw records in DuckDB bronze, and quarantines invalid records with lineage.
 2. **dbt quality gates and gold marts**: Builds bronze, silver, and gold models, runs 39 dbt tests plus a custom A1c plausibility check, and creates care-gap, reliability, and masked patient-panel marts.
-3. **Operational dashboard and pipeline monitor**: Provides a three-view dark dashboard with a launch health modal, Current State, What's in process, Detailed view, hover windows, run fidelity trend, OpenTelemetry Trace Dashboard, restart simulation, slow-run monitor, and quarantine archive action.
+3. **Operational dashboard and pipeline monitor**: Provides a three-view dark dashboard with a launch health modal, top-level pipeline monitor, Current State, What's in process, Detailed view, hover windows, run fidelity trend, OpenTelemetry Trace Dashboard, restart simulation, deterministic synthetic-load deltas, slow-run monitor, and quarantine archive action.
 4. **FHIR Mapping Workbench**: Supports R4/R4B/R5 schema lookup, unmapped blob review, simulate-but-don't-apply migration, and forced-conversion decisions with audit notes.
-5. **Governance, privacy, and resilience artifacts**: Demonstrates a gold-promotion review queue, unmapped blob provenance drawer, PHI-minimization report, last-known-good snapshots, OpenTelemetry-style console traces, and bounded chaos injection.
+5. **Governance, privacy, and resilience artifacts**: Demonstrates a gold-promotion review queue, row-level failed-record masking, unmapped blob provenance drawer, PHI-minimization report, last-known-good snapshots, OpenTelemetry-style console traces, and bounded chaos injection.
 
 ## Dashboard Preview
 
@@ -56,7 +56,7 @@ Use What's in process for operational review: pipeline stages, source feed rollu
 
 ![Detailed dashboard view with patient-level controls](dashboards/screenshots/dashboard-detail-view.png)
 
-Use Detailed view when you want everything: language segmentation, source rollups, fidelity trend, OTel tracing, and the patient-level care-gap table with search, filters, date range, paging, sorting, and CSV export.
+Use Detailed view when you want everything: English-first language segmentation, age-band distribution, failed-record masking detail, source rollups, fidelity trend, OTel tracing, and the patient-level care-gap table with search, filters, date range, paging, sorting, and CSV export.
 
 ## Mapping Workbench Preview
 
@@ -70,12 +70,14 @@ Use the FHIR Mapping Workbench to compare R4/R4B/R5 schema support, inspect unma
 - Live source-to-FHIR-to-model mapping traces for micro-batch demos.
 - Raw bronze landing with source lineage.
 - Quarantine handling for invalid records.
+- Row-level failed-record detail with masked payload previews for stewardship review.
 - A gold-promotion review queue for records that should not feed dashboard-ready marts.
 - An unmapped source drawer for blob data retained for provenance and future semantic mapping.
 - Privacy-masked analytics marts and a PHI-minimization report using synthetic data.
 - Last-known-good local data release snapshots after successful runs.
 - Optional OpenTelemetry console tracing, dashboard trace visualization, and bounded chaos injection for pipeline observability demos.
 - A dashboard monitor modal with simulated restart actions for stalled pipeline workflows.
+- Deterministic synthetic-load variation so repeated local runs produce visible care-gap and reliability deltas.
 - An interactive FHIR Mapping Workbench for version-aware schema lookup, mapping simulation, and forced-conversion notes.
 - A three-view dashboard layout: Current State, What's in process, and Detailed view.
 - dbt bronze, silver, and gold models.
@@ -205,7 +207,7 @@ To run the dashboard with a real local button that loads the next synthetic batc
 uv run python -m scripts.dashboard_control_server
 ```
 
-Then open `http://127.0.0.1:8765/`, choose `Open pipeline monitor`, and click `Run next synthetic load`. Each click advances through larger synthetic panels and refreshes the generated reports and dashboard artifacts. The button is intentionally local-only; the static HTML remains read-only when opened directly or viewed on GitHub.
+Then open `http://127.0.0.1:8765/`, choose `Open pipeline monitor`, and click `Run next synthetic load`. The first click advances from the default 60-patient panel to 120 synthetic patients, applies a deterministic variation seed so care-gap signals can move, refreshes generated reports and dashboard artifacts, and reloads the served dashboard with cache-busting. Later clicks advance to 180, 240, and 300 patients. The button is intentionally local-only; the static HTML remains read-only when opened directly or viewed on GitHub.
 
 To show each synthetic FHIR resource as it maps toward analytics models:
 
@@ -288,7 +290,7 @@ Open `dashboards/static_preview.html` after running the demo to view the current
 | Synthetic-only FHIR pipeline | Deterministic local synthetic FHIR records with simulated source adapters only. |
 | Larger viable data sample | Default panel is 60 synthetic patients and 347 loaded FHIR resources. |
 | Professional dark dashboard | Generated dark dashboard with custom logo, author image, current screenshots, stakeholder-ready copy, and three dashboard views. |
-| Real-time style monitoring | Pipeline Monitor modal includes a slow staged run, restart actions, a local synthetic-load control button, and event log. |
+| Real-time style monitoring | Pipeline Monitor modal includes a slow staged run, restart actions, a local synthetic-load control button with deterministic run variation, and event log. |
 | Quarantine operations | Invalid records are quarantined, reviewed for gold promotion, and can be dismissed into a simulated archive export. |
 | FHIR version mapping | Workbench supports R4, R4B, and R5 schema lookup, simulation, forced FHIR target types, forced conversion notes, local policy persistence, and future-effective revert decisions. |
 | Data quality and fidelity | dbt tests, triage report, run fidelity trend, and last-known-good snapshots are included. |
@@ -299,7 +301,7 @@ Open `dashboards/static_preview.html` after running the demo to view the current
 
 ## Portfolio Artifacts
 
-- `dashboards/static_preview.html`: generated dark-theme dashboard preview with hover windows, live monitor simulation, quarantine archive action, run fidelity trend, and sortable/exportable patient detail.
+- `dashboards/static_preview.html`: generated dark-theme dashboard preview with top pipeline monitor action, hover windows, live monitor simulation, quarantine archive action, failed-record masking detail, run fidelity trend, and sortable/exportable patient detail.
 - `dashboards/fhir_mapping_workbench.html`: interactive local FHIR mapping workbench.
 - `scripts/dashboard_control_server.py`: local-only dashboard server that enables the `Run next synthetic load` button.
 - `scripts/fhir_version_policy.py`: local demo policy recorder for FHIR version selection, forced mappings, and future-effective reverts.

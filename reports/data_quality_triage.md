@@ -12,7 +12,7 @@ This report is generated from dbt artifacts after the local demo build.
 
 | Source system | Resource type | Seen | Loaded | Quarantined | Suggested next step |
 |---|---:|---:|---:|---:|---|
-| `legacy_pms_simulated` | `Observation` | 6 | 5 | 1 | Inspect the quarantine NDJSON and decide whether to correct the source mapping or reject the feed record. |
+| `legacy_pms_simulated` | `Observation` | 17 | 16 | 1 | Inspect the quarantine NDJSON and decide whether to correct the source mapping or reject the feed record. |
 
 ## Findings
 

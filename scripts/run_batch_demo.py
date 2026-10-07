@@ -104,6 +104,7 @@ def run_batches(
     patient_count: int,
     batch_size: int,
     delay_seconds: float,
+    variation_seed: int,
     trace_mappings: bool,
     trace_delay_seconds: float,
     chaos_scenario: str,
@@ -118,7 +119,7 @@ def run_batches(
     if batch_size < 1:
         raise ValueError("batch_size must be at least 1")
 
-    patients = list(patient_panel(patient_count))
+    patients = list(patient_panel(patient_count, variation_seed))
     batches = [patients[index : index + batch_size] for index in range(0, len(patients), batch_size)]
 
     for batch_number, batch_patients in enumerate(batches, start=1):
@@ -176,6 +177,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--database", type=Path, default=DEFAULT_DATABASE)
     parser.add_argument("--quarantine-dir", type=Path, default=DEFAULT_QUARANTINE_DIR)
     parser.add_argument("--patient-count", type=int, default=DEFAULT_PATIENT_COUNT)
+    parser.add_argument("--variation-seed", type=int, default=0)
     parser.add_argument("--batch-size", type=int, default=20)
     parser.add_argument("--delay-seconds", type=float, default=1.0)
     parser.add_argument("--trace-mappings", action="store_true", help="Print live FHIR-to-model mapping traces.")
@@ -206,6 +208,7 @@ def main() -> None:
             args.patient_count,
             args.batch_size,
             args.delay_seconds,
+            args.variation_seed,
             args.trace_mappings,
             args.trace_delay_seconds,
             args.chaos_scenario,

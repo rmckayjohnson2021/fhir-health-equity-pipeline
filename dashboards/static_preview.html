@@ -166,6 +166,13 @@
       margin-top: 4px;
       text-align: left;
     }
+    .monitor-button-primary {
+      margin: -18px 0 26px;
+      min-height: 44px;
+      border-color: rgba(24, 213, 238, 0.62);
+      background: rgba(24, 213, 238, 0.16);
+      box-shadow: 0 0 26px rgba(24, 213, 238, 0.1);
+    }
     .monitor-button:hover, .modal-action:hover, .modal-close:hover, .archive-action:hover {
       border-color: rgba(24, 213, 238, 0.72);
       background: rgba(24, 213, 238, 0.18);
@@ -267,6 +274,27 @@
       font-size: 13px;
       font-weight: 800;
       margin-top: 18px;
+    }
+    .hero-actions {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      margin-top: 18px;
+    }
+    .hero-action {
+      border: 1px solid rgba(24, 213, 238, 0.48);
+      border-radius: 8px;
+      background: rgba(24, 213, 238, 0.14);
+      color: #d7fbff;
+      cursor: pointer;
+      font: inherit;
+      font-weight: 900;
+      min-height: 42px;
+      padding: 9px 13px;
+    }
+    .hero-action:hover {
+      border-color: rgba(24, 213, 238, 0.78);
+      background: rgba(24, 213, 238, 0.21);
     }
     .view-tabs {
       display: grid;
@@ -474,6 +502,37 @@
       color: var(--muted);
       font-size: 13px;
     }
+    .age-grid {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 10px;
+      margin-top: 14px;
+    }
+    .age-card {
+      border: 1px solid var(--line-soft);
+      border-radius: 8px;
+      background: #09101a;
+      padding: 12px;
+    }
+    .age-card span {
+      display: block;
+      color: var(--muted);
+      font-size: 12px;
+      font-weight: 800;
+      margin-bottom: 5px;
+      text-transform: uppercase;
+    }
+    .age-card strong {
+      display: block;
+      color: var(--text);
+      font-size: 26px;
+      line-height: 1;
+      margin-bottom: 10px;
+    }
+    .age-card p {
+      margin-top: 7px;
+      font-size: 12px;
+    }
     .trace-dashboard {
       display: grid;
       gap: 14px;
@@ -558,6 +617,11 @@
     .trace-table code {
       white-space: normal;
       overflow-wrap: anywhere;
+    }
+    .failed-record-table code {
+      white-space: normal;
+      overflow-wrap: anywhere;
+      font-size: 12px;
     }
     .pill {
       display: inline-flex;
@@ -1061,7 +1125,7 @@
       .bar-row, .reliability-row {
         grid-template-columns: 1fr;
       }
-      .trace-summary, .trace-row {
+      .trace-summary, .trace-row, .age-grid {
         grid-template-columns: 1fr;
       }
     }
@@ -1077,6 +1141,7 @@
           <span>FHIR data platform</span>
         </div>
       </div>
+      <button class="monitor-button monitor-button-primary" type="button" data-open-monitor>Open pipeline monitor</button>
 
       <section class="side-section">
         <div class="side-label">System overview</div>
@@ -1091,7 +1156,6 @@
         <div class="side-pill"><span>Quarantine gate</span><b>on</b></div>
         <div class="side-pill"><span>dbt tests</span><b>39/39</b></div>
         <div class="side-pill"><span>Cloud required</span><b>no</b></div>
-        <button class="monitor-button" type="button" data-open-monitor>Open pipeline monitor</button>
       </section>
 
       <section class="side-section">
@@ -1112,6 +1176,10 @@
         <h1>FHIR Health Equity Pipeline</h1>
         <p class="hero-copy">Synthetic clinical records are routed, validated, transformed, tested, and surfaced as health-equity and pipeline reliability analytics. This view is generated from the local DuckDB gold marts after the demo run.</p>
         <div class="disclaimer">Synthetic data only - no real patient records or real EHR integrations</div>
+        <div class="hero-actions">
+          <button class="hero-action" type="button" data-open-monitor>Open pipeline monitor</button>
+          <button class="hero-action" type="button" data-hero-view="detail">View detailed records</button>
+        </div>
       </section>
 
       <nav class="view-tabs" aria-label="Dashboard views">
@@ -1262,17 +1330,17 @@
 
             <div class="bar-row">
               <div class="bar-label">
-                <strong>Haitian Creole</strong>
-                <span>13 of 13 with an A1c gap</span>
+                <strong>English</strong>
+                <span>4 of 17 with an A1c gap</span>
               </div>
-              <div class="track"><span style="width: 100.0%"></span></div>
-              <b>100.0%</b>
+              <div class="track"><span style="width: 23.5%"></span></div>
+              <b>23.5%</b>
             </div>
 
             <div class="bar-row">
               <div class="bar-label">
-                <strong>English</strong>
-                <span>4 of 12 with an A1c gap</span>
+                <strong>Spanish</strong>
+                <span>6 of 18 with an A1c gap</span>
               </div>
               <div class="track"><span style="width: 33.3%"></span></div>
               <b>33.3%</b>
@@ -1280,31 +1348,66 @@
 
             <div class="bar-row">
               <div class="bar-label">
-                <strong>Arabic</strong>
-                <span>3 of 11 with an A1c gap</span>
-              </div>
-              <div class="track"><span style="width: 27.3%"></span></div>
-              <b>27.3%</b>
-            </div>
-
-            <div class="bar-row">
-              <div class="bar-label">
                 <strong>French</strong>
-                <span>3 of 11 with an A1c gap</span>
+                <span>12 of 12 with an A1c gap</span>
               </div>
-              <div class="track"><span style="width: 27.3%"></span></div>
-              <b>27.3%</b>
+              <div class="track"><span style="width: 100.0%"></span></div>
+              <b>100.0%</b>
             </div>
 
             <div class="bar-row">
               <div class="bar-label">
-                <strong>Spanish</strong>
-                <span>3 of 13 with an A1c gap</span>
+                <strong>Haitian Creole</strong>
+                <span>4 of 7 with an A1c gap</span>
               </div>
-              <div class="track"><span style="width: 23.1%"></span></div>
-              <b>23.1%</b>
+              <div class="track"><span style="width: 57.1%"></span></div>
+              <b>57.1%</b>
             </div>
 
+            <div class="bar-row">
+              <div class="bar-label">
+                <strong>Arabic</strong>
+                <span>0 of 6 with an A1c gap</span>
+              </div>
+              <div class="track"><span style="width: 2.0%"></span></div>
+              <b>0.0%</b>
+            </div>
+
+        </section>
+
+        <section class="panel" data-view-section="detail">
+          <h2>Age Band Distribution</h2>
+          <p>Generated patients are deliberately spread across age bands so segmentation is visible during the demo.</p>
+          <div class="age-grid">
+
+            <div class="age-card">
+              <span>18-39</span>
+              <strong>21</strong>
+              <div class="mini-track"><span class="ok" style="width: 35.0%"></span></div>
+              <p>35.0% of cohort</p>
+            </div>
+
+            <div class="age-card">
+              <span>40-64</span>
+              <strong>24</strong>
+              <div class="mini-track"><span class="ok" style="width: 40.0%"></span></div>
+              <p>40.0% of cohort</p>
+            </div>
+
+            <div class="age-card">
+              <span>65+</span>
+              <strong>15</strong>
+              <div class="mini-track"><span class="ok" style="width: 25.0%"></span></div>
+              <p>25.0% of cohort</p>
+            </div>
+
+          </div>
+        </section>
+
+        <section class="panel wide" data-view-section="detail">
+          <h2>Quarantined Record Detail and Masking</h2>
+          <p>Individual failed records stay out of gold marts, retain evidence for stewardship, and expose a masked preview for review workflows.</p>
+          <table class="failed-record-table" data-failed-record-table><thead><tr><th>Issue</th><th>Source</th><th>Resource</th><th>Reason</th><th>Evidence</th><th>Gold decision</th><th>Masked failed payload</th></tr></thead><tbody><tr><td><code>quarantine-legacy_pms_simulated-Observation-1</code></td><td>Legacy PMS export*</td><td><code>Observation/missing-id</code></td><td>missing required FHIR resource id</td><td><code>data\raw\legacy_pms_simulated\fhir.ndjson:117</code></td><td><span class="pill pill-risk">request_source_correction</span></td><td><code>{&quot;code&quot;: {&quot;text&quot;: &quot;Hemoglobin A1c&quot;}, &quot;fixture_note&quot;: &quot;Intentional invalid record: missing id for quarantine demo.&quot;, &quot;resourceType&quot;: &quot;Observation&quot;, &quot;status&quot;: &quot;final&quot;, &quot;subject&quot;: {&quot;reference&quot;: &quot;PAT-0C29BDB3A9&quot;}, &quot;valueQuantity&quot;: {&quot;masking_note&quot;: &quot;numeric value bucketed for review&quot;, &quot;unit&quot;: &quot;%&quot;, &quot;value&quot;: &quot;9+&quot;}}</code></td></tr></tbody></table>
         </section>
 
         <section class="panel" data-view-section="process detail">
@@ -1560,7 +1663,7 @@
             <button type="button" data-export-patients>Export CSV</button>
           </div>
           <div class="table-result-count" data-patient-count></div>
-          <table data-patient-table><thead><tr><th><button type="button" data-sort-column="0">Patient</button></th><th><button type="button" data-sort-column="1">Language</button></th><th><button type="button" data-sort-column="2">Age band</button></th><th><button type="button" data-sort-column="3">Last A1c</button></th><th><button type="button" data-sort-column="4">Status</button></th><th><button type="button" data-sort-column="5">Outreach</button></th></tr></thead><tbody><tr><td>patient-001</td><td>Spanish</td><td>40-64</td><td>2026-02-15</td><td><span class="pill pill-ok">Current</span></td><td>phone_or_sms</td></tr><tr><td>patient-002</td><td>English</td><td>40-64</td><td>No A1c on file</td><td><span class="pill pill-risk">Gap</span></td><td>phone_or_sms</td></tr><tr><td>patient-003</td><td>Haitian Creole</td><td>40-64</td><td>2025-09-01</td><td><span class="pill pill-risk">Gap</span></td><td>mail_only</td></tr><tr><td>patient-004</td><td>Spanish</td><td>65+</td><td>2024-05-05</td><td><span class="pill pill-risk">Gap</span></td><td>phone_or_sms</td></tr><tr><td>patient-005</td><td>Haitian Creole</td><td>65+</td><td>No A1c on file</td><td><span class="pill pill-risk">Gap</span></td><td>phone_or_sms</td></tr><tr><td>patient-006</td><td>English</td><td>65+</td><td>2026-02-07</td><td><span class="pill pill-ok">Current</span></td><td>phone_or_sms</td></tr><tr><td>patient-007</td><td>French</td><td>65+</td><td>2026-03-08</td><td><span class="pill pill-ok">Current</span></td><td>phone_or_sms</td></tr><tr><td>patient-008</td><td>Arabic</td><td>65+</td><td>2024-09-09</td><td><span class="pill pill-risk">Gap</span></td><td>mail_only</td></tr><tr><td>patient-009</td><td>Spanish</td><td>65+</td><td>2026-05-10</td><td><span class="pill pill-ok">Current</span></td><td>phone_or_sms</td></tr><tr><td>patient-010</td><td>Haitian Creole</td><td>65+</td><td>No A1c on file</td><td><span class="pill pill-risk">Gap</span></td><td>phone_or_sms</td></tr><tr><td>patient-011</td><td>English</td><td>65+</td><td>2026-02-12</td><td><span class="pill pill-ok">Current</span></td><td>phone_or_sms</td></tr><tr><td>patient-012</td><td>French</td><td>65+</td><td>2024-01-13</td><td><span class="pill pill-risk">Gap</span></td><td>phone_or_sms</td></tr><tr><td>patient-013</td><td>Arabic</td><td>65+</td><td>2026-04-14</td><td><span class="pill pill-ok">Current</span></td><td>phone_or_sms</td></tr><tr><td>patient-014</td><td>Spanish</td><td>40-64</td><td>2026-05-15</td><td><span class="pill pill-ok">Current</span></td><td>phone_or_sms</td></tr><tr><td>patient-015</td><td>Haitian Creole</td><td>40-64</td><td>No A1c on file</td><td><span class="pill pill-risk">Gap</span></td><td>phone_or_sms</td></tr><tr><td>patient-016</td><td>English</td><td>40-64</td><td>2024-05-17</td><td><span class="pill pill-risk">Gap</span></td><td>mail_only</td></tr><tr><td>patient-017</td><td>French</td><td>40-64</td><td>2026-03-18</td><td><span class="pill pill-ok">Current</span></td><td>phone_or_sms</td></tr><tr><td>patient-018</td><td>Arabic</td><td>40-64</td><td>2026-04-19</td><td><span class="pill pill-ok">Current</span></td><td>phone_or_sms</td></tr><tr><td>patient-019</td><td>Spanish</td><td>40-64</td><td>2026-05-20</td><td><span class="pill pill-ok">Current</span></td><td>phone_or_sms</td></tr><tr><td>patient-020</td><td>Haitian Creole</td><td>40-64</td><td>No A1c on file</td><td><span class="pill pill-risk">Gap</span></td><td>phone_or_sms</td></tr><tr><td>patient-021</td><td>English</td><td>40-64</td><td>2026-02-22</td><td><span class="pill pill-ok">Current</span></td><td>phone_or_sms</td></tr><tr><td>patient-022</td><td>French</td><td>40-64</td><td>2026-03-23</td><td><span class="pill pill-ok">Current</span></td><td>phone_or_sms</td></tr><tr><td>patient-023</td><td>Arabic</td><td>40-64</td><td>2026-04-24</td><td><span class="pill pill-ok">Current</span></td><td>phone_or_sms</td></tr><tr><td>patient-024</td><td>Spanish</td><td>40-64</td><td>2024-01-25</td><td><span class="pill pill-risk">Gap</span></td><td>mail_only</td></tr><tr><td>patient-025</td><td>Haitian Creole</td><td>40-64</td><td>No A1c on file</td><td><span class="pill pill-risk">Gap</span></td><td>phone_or_sms</td></tr><tr><td>patient-026</td><td>English</td><td>40-64</td><td>2026-02-27</td><td><span class="pill pill-ok">Current</span></td><td>phone_or_sms</td></tr><tr><td>patient-027</td><td>French</td><td>40-64</td><td>2026-03-01</td><td><span class="pill pill-ok">Current</span></td><td>phone_or_sms</td></tr><tr><td>patient-028</td><td>Arabic</td><td>40-64</td><td>2024-05-02</td><td><span class="pill pill-risk">Gap</span></td><td>phone_or_sms</td></tr><tr><td>patient-029</td><td>Spanish</td><td>40-64</td><td>2026-05-03</td><td><span class="pill pill-ok">Current</span></td><td>phone_or_sms</td></tr><tr><td>patient-030</td><td>Haitian Creole</td><td>40-64</td><td>No A1c on file</td><td><span class="pill pill-risk">Gap</span></td><td>phone_or_sms</td></tr><tr><td>patient-031</td><td>English</td><td>40-64</td><td>2026-02-05</td><td><span class="pill pill-ok">Current</span></td><td>phone_or_sms</td></tr><tr><td>patient-032</td><td>French</td><td>40-64</td><td>2024-09-06</td><td><span class="pill pill-risk">Gap</span></td><td>mail_only</td></tr><tr><td>patient-033</td><td>Arabic</td><td>40-64</td><td>2026-04-07</td><td><span class="pill pill-ok">Current</span></td><td>phone_or_sms</td></tr><tr><td>patient-034</td><td>Spanish</td><td>40-64</td><td>2026-05-08</td><td><span class="pill pill-ok">Current</span></td><td>phone_or_sms</td></tr><tr><td>patient-035</td><td>Haitian Creole</td><td>40-64</td><td>No A1c on file</td><td><span class="pill pill-risk">Gap</span></td><td>phone_or_sms</td></tr><tr><td>patient-036</td><td>English</td><td>40-64</td><td>2024-01-10</td><td><span class="pill pill-risk">Gap</span></td><td>phone_or_sms</td></tr><tr><td>patient-037</td><td>French</td><td>40-64</td><td>2026-03-11</td><td><span class="pill pill-ok">Current</span></td><td>phone_or_sms</td></tr><tr><td>patient-038</td><td>Arabic</td><td>40-64</td><td>2026-04-12</td><td><span class="pill pill-ok">Current</span></td><td>phone_or_sms</td></tr><tr><td>patient-039</td><td>Spanish</td><td>18-39</td><td>2026-05-13</td><td><span class="pill pill-ok">Current</span></td><td>phone_or_sms</td></tr><tr><td>patient-040</td><td>Haitian Creole</td><td>18-39</td><td>No A1c on file</td><td><span class="pill pill-risk">Gap</span></td><td>mail_only</td></tr><tr><td>patient-041</td><td>English</td><td>18-39</td><td>2026-02-15</td><td><span class="pill pill-ok">Current</span></td><td>phone_or_sms</td></tr><tr><td>patient-042</td><td>French</td><td>18-39</td><td>2026-03-16</td><td><span class="pill pill-ok">Current</span></td><td>phone_or_sms</td></tr><tr><td>patient-043</td><td>Arabic</td><td>18-39</td><td>2026-04-17</td><td><span class="pill pill-ok">Current</span></td><td>phone_or_sms</td></tr><tr><td>patient-044</td><td>Spanish</td><td>18-39</td><td>2024-09-18</td><td><span class="pill pill-risk">Gap</span></td><td>phone_or_sms</td></tr><tr><td>patient-045</td><td>Haitian Creole</td><td>18-39</td><td>No A1c on file</td><td><span class="pill pill-risk">Gap</span></td><td>phone_or_sms</td></tr><tr><td>patient-046</td><td>English</td><td>18-39</td><td>2026-02-20</td><td><span class="pill pill-ok">Current</span></td><td>phone_or_sms</td></tr><tr><td>patient-047</td><td>French</td><td>65+</td><td>2026-03-21</td><td><span class="pill pill-ok">Current</span></td><td>phone_or_sms</td></tr><tr><td>patient-048</td><td>Arabic</td><td>65+</td><td>2024-01-22</td><td><span class="pill pill-risk">Gap</span></td><td>mail_only</td></tr><tr><td>patient-049</td><td>Spanish</td><td>65+</td><td>2026-05-23</td><td><span class="pill pill-ok">Current</span></td><td>phone_or_sms</td></tr><tr><td>patient-050</td><td>Haitian Creole</td><td>65+</td><td>No A1c on file</td><td><span class="pill pill-risk">Gap</span></td><td>phone_or_sms</td></tr><tr><td>patient-051</td><td>English</td><td>65+</td><td>2026-02-25</td><td><span class="pill pill-ok">Current</span></td><td>phone_or_sms</td></tr><tr><td>patient-052</td><td>French</td><td>65+</td><td>2024-05-26</td><td><span class="pill pill-risk">Gap</span></td><td>phone_or_sms</td></tr><tr><td>patient-053</td><td>Arabic</td><td>65+</td><td>2026-04-27</td><td><span class="pill pill-ok">Current</span></td><td>phone_or_sms</td></tr><tr><td>patient-054</td><td>Spanish</td><td>65+</td><td>2026-05-01</td><td><span class="pill pill-ok">Current</span></td><td>phone_or_sms</td></tr><tr><td>patient-055</td><td>Haitian Creole</td><td>65+</td><td>No A1c on file</td><td><span class="pill pill-risk">Gap</span></td><td>phone_or_sms</td></tr><tr><td>patient-056</td><td>English</td><td>65+</td><td>2024-09-03</td><td><span class="pill pill-risk">Gap</span></td><td>mail_only</td></tr><tr><td>patient-057</td><td>French</td><td>65+</td><td>2026-03-04</td><td><span class="pill pill-ok">Current</span></td><td>phone_or_sms</td></tr><tr><td>patient-058</td><td>Arabic</td><td>65+</td><td>2026-04-05</td><td><span class="pill pill-ok">Current</span></td><td>phone_or_sms</td></tr><tr><td>patient-059</td><td>Spanish</td><td>65+</td><td>2026-05-06</td><td><span class="pill pill-ok">Current</span></td><td>phone_or_sms</td></tr><tr><td>patient-060</td><td>Haitian Creole</td><td>65+</td><td>No A1c on file</td><td><span class="pill pill-risk">Gap</span></td><td>phone_or_sms</td></tr></tbody></table>
+          <table data-patient-table><thead><tr><th><button type="button" data-sort-column="0">Patient</button></th><th><button type="button" data-sort-column="1">Language</button></th><th><button type="button" data-sort-column="2">Age band</button></th><th><button type="button" data-sort-column="3">Last A1c</button></th><th><button type="button" data-sort-column="4">Status</button></th><th><button type="button" data-sort-column="5">Outreach</button></th></tr></thead><tbody><tr><td>patient-001</td><td>Spanish</td><td>40-64</td><td>2026-02-15</td><td><span class="pill pill-ok">Current</span></td><td>phone_or_sms</td></tr><tr><td>patient-002</td><td>English</td><td>40-64</td><td>No A1c on file</td><td><span class="pill pill-risk">Gap</span></td><td>phone_or_sms</td></tr><tr><td>patient-003</td><td>Haitian Creole</td><td>40-64</td><td>2025-09-01</td><td><span class="pill pill-risk">Gap</span></td><td>mail_only</td></tr><tr><td>patient-004</td><td>Spanish</td><td>18-39</td><td>2024-05-05</td><td><span class="pill pill-risk">Gap</span></td><td>phone_or_sms</td></tr><tr><td>patient-005</td><td>French</td><td>40-64</td><td>No A1c on file</td><td><span class="pill pill-risk">Gap</span></td><td>phone_or_sms</td></tr><tr><td>patient-006</td><td>Haitian Creole</td><td>40-64</td><td>2026-02-07</td><td><span class="pill pill-ok">Current</span></td><td>phone_or_sms</td></tr><tr><td>patient-007</td><td>Arabic</td><td>40-64</td><td>2026-03-08</td><td><span class="pill pill-ok">Current</span></td><td>phone_or_sms</td></tr><tr><td>patient-008</td><td>English</td><td>40-64</td><td>2024-09-09</td><td><span class="pill pill-risk">Gap</span></td><td>mail_only</td></tr><tr><td>patient-009</td><td>Spanish</td><td>65+</td><td>2026-05-10</td><td><span class="pill pill-ok">Current</span></td><td>phone_or_sms</td></tr><tr><td>patient-010</td><td>French</td><td>65+</td><td>No A1c on file</td><td><span class="pill pill-risk">Gap</span></td><td>phone_or_sms</td></tr><tr><td>patient-011</td><td>English</td><td>65+</td><td>2026-02-12</td><td><span class="pill pill-ok">Current</span></td><td>phone_or_sms</td></tr><tr><td>patient-012</td><td>Spanish</td><td>18-39</td><td>2024-01-13</td><td><span class="pill pill-risk">Gap</span></td><td>phone_or_sms</td></tr><tr><td>patient-013</td><td>English</td><td>18-39</td><td>2026-04-14</td><td><span class="pill pill-ok">Current</span></td><td>phone_or_sms</td></tr><tr><td>patient-014</td><td>Spanish</td><td>18-39</td><td>2026-05-15</td><td><span class="pill pill-ok">Current</span></td><td>phone_or_sms</td></tr><tr><td>patient-015</td><td>French</td><td>18-39</td><td>No A1c on file</td><td><span class="pill pill-risk">Gap</span></td><td>phone_or_sms</td></tr><tr><td>patient-016</td><td>Haitian Creole</td><td>40-64</td><td>2024-05-17</td><td><span class="pill pill-risk">Gap</span></td><td>mail_only</td></tr><tr><td>patient-017</td><td>Arabic</td><td>40-64</td><td>2026-03-18</td><td><span class="pill pill-ok">Current</span></td><td>phone_or_sms</td></tr><tr><td>patient-018</td><td>English</td><td>40-64</td><td>2026-04-19</td><td><span class="pill pill-ok">Current</span></td><td>phone_or_sms</td></tr><tr><td>patient-019</td><td>Spanish</td><td>40-64</td><td>2026-05-20</td><td><span class="pill pill-ok">Current</span></td><td>phone_or_sms</td></tr><tr><td>patient-020</td><td>French</td><td>65+</td><td>No A1c on file</td><td><span class="pill pill-risk">Gap</span></td><td>phone_or_sms</td></tr><tr><td>patient-021</td><td>English</td><td>65+</td><td>2026-02-22</td><td><span class="pill pill-ok">Current</span></td><td>phone_or_sms</td></tr><tr><td>patient-022</td><td>Spanish</td><td>65+</td><td>2026-03-23</td><td><span class="pill pill-ok">Current</span></td><td>phone_or_sms</td></tr><tr><td>patient-023</td><td>English</td><td>18-39</td><td>2026-04-24</td><td><span class="pill pill-ok">Current</span></td><td>phone_or_sms</td></tr><tr><td>patient-024</td><td>Spanish</td><td>18-39</td><td>2024-01-25</td><td><span class="pill pill-risk">Gap</span></td><td>mail_only</td></tr><tr><td>patient-025</td><td>French</td><td>18-39</td><td>No A1c on file</td><td><span class="pill pill-risk">Gap</span></td><td>phone_or_sms</td></tr><tr><td>patient-026</td><td>Haitian Creole</td><td>18-39</td><td>2026-02-27</td><td><span class="pill pill-ok">Current</span></td><td>phone_or_sms</td></tr><tr><td>patient-027</td><td>Arabic</td><td>40-64</td><td>2026-03-01</td><td><span class="pill pill-ok">Current</span></td><td>phone_or_sms</td></tr><tr><td>patient-028</td><td>English</td><td>40-64</td><td>2024-05-02</td><td><span class="pill pill-risk">Gap</span></td><td>phone_or_sms</td></tr><tr><td>patient-029</td><td>Spanish</td><td>40-64</td><td>2026-05-03</td><td><span class="pill pill-ok">Current</span></td><td>phone_or_sms</td></tr><tr><td>patient-030</td><td>French</td><td>40-64</td><td>No A1c on file</td><td><span class="pill pill-risk">Gap</span></td><td>phone_or_sms</td></tr><tr><td>patient-031</td><td>English</td><td>65+</td><td>2026-02-05</td><td><span class="pill pill-ok">Current</span></td><td>phone_or_sms</td></tr><tr><td>patient-032</td><td>Spanish</td><td>65+</td><td>2024-09-06</td><td><span class="pill pill-risk">Gap</span></td><td>mail_only</td></tr><tr><td>patient-033</td><td>English</td><td>65+</td><td>2026-04-07</td><td><span class="pill pill-ok">Current</span></td><td>phone_or_sms</td></tr><tr><td>patient-034</td><td>Spanish</td><td>18-39</td><td>2026-05-08</td><td><span class="pill pill-ok">Current</span></td><td>phone_or_sms</td></tr><tr><td>patient-035</td><td>French</td><td>18-39</td><td>No A1c on file</td><td><span class="pill pill-risk">Gap</span></td><td>phone_or_sms</td></tr><tr><td>patient-036</td><td>Haitian Creole</td><td>18-39</td><td>2024-01-10</td><td><span class="pill pill-risk">Gap</span></td><td>phone_or_sms</td></tr><tr><td>patient-037</td><td>Arabic</td><td>18-39</td><td>2026-03-11</td><td><span class="pill pill-ok">Current</span></td><td>phone_or_sms</td></tr><tr><td>patient-038</td><td>English</td><td>40-64</td><td>2026-04-12</td><td><span class="pill pill-ok">Current</span></td><td>phone_or_sms</td></tr><tr><td>patient-039</td><td>Spanish</td><td>40-64</td><td>2026-05-13</td><td><span class="pill pill-ok">Current</span></td><td>phone_or_sms</td></tr><tr><td>patient-040</td><td>French</td><td>40-64</td><td>No A1c on file</td><td><span class="pill pill-risk">Gap</span></td><td>mail_only</td></tr><tr><td>patient-041</td><td>English</td><td>40-64</td><td>2026-02-15</td><td><span class="pill pill-ok">Current</span></td><td>phone_or_sms</td></tr><tr><td>patient-042</td><td>Spanish</td><td>65+</td><td>2026-03-16</td><td><span class="pill pill-ok">Current</span></td><td>phone_or_sms</td></tr><tr><td>patient-043</td><td>English</td><td>65+</td><td>2026-04-17</td><td><span class="pill pill-ok">Current</span></td><td>phone_or_sms</td></tr><tr><td>patient-044</td><td>Spanish</td><td>65+</td><td>2024-09-18</td><td><span class="pill pill-risk">Gap</span></td><td>phone_or_sms</td></tr><tr><td>patient-045</td><td>French</td><td>18-39</td><td>No A1c on file</td><td><span class="pill pill-risk">Gap</span></td><td>phone_or_sms</td></tr><tr><td>patient-046</td><td>Haitian Creole</td><td>18-39</td><td>2026-02-20</td><td><span class="pill pill-ok">Current</span></td><td>phone_or_sms</td></tr><tr><td>patient-047</td><td>Arabic</td><td>18-39</td><td>2026-03-21</td><td><span class="pill pill-ok">Current</span></td><td>phone_or_sms</td></tr><tr><td>patient-048</td><td>English</td><td>18-39</td><td>2024-01-22</td><td><span class="pill pill-risk">Gap</span></td><td>mail_only</td></tr><tr><td>patient-049</td><td>Spanish</td><td>40-64</td><td>2026-05-23</td><td><span class="pill pill-ok">Current</span></td><td>phone_or_sms</td></tr><tr><td>patient-050</td><td>French</td><td>40-64</td><td>No A1c on file</td><td><span class="pill pill-risk">Gap</span></td><td>phone_or_sms</td></tr><tr><td>patient-051</td><td>English</td><td>40-64</td><td>2026-02-25</td><td><span class="pill pill-ok">Current</span></td><td>phone_or_sms</td></tr><tr><td>patient-052</td><td>Spanish</td><td>40-64</td><td>2024-05-26</td><td><span class="pill pill-risk">Gap</span></td><td>phone_or_sms</td></tr><tr><td>patient-053</td><td>English</td><td>65+</td><td>2026-04-27</td><td><span class="pill pill-ok">Current</span></td><td>phone_or_sms</td></tr><tr><td>patient-054</td><td>Spanish</td><td>65+</td><td>2026-05-01</td><td><span class="pill pill-ok">Current</span></td><td>phone_or_sms</td></tr><tr><td>patient-055</td><td>French</td><td>65+</td><td>No A1c on file</td><td><span class="pill pill-risk">Gap</span></td><td>phone_or_sms</td></tr><tr><td>patient-056</td><td>Haitian Creole</td><td>18-39</td><td>2024-09-03</td><td><span class="pill pill-risk">Gap</span></td><td>mail_only</td></tr><tr><td>patient-057</td><td>Arabic</td><td>18-39</td><td>2026-03-04</td><td><span class="pill pill-ok">Current</span></td><td>phone_or_sms</td></tr><tr><td>patient-058</td><td>English</td><td>18-39</td><td>2026-04-05</td><td><span class="pill pill-ok">Current</span></td><td>phone_or_sms</td></tr><tr><td>patient-059</td><td>Spanish</td><td>18-39</td><td>2026-05-06</td><td><span class="pill pill-ok">Current</span></td><td>phone_or_sms</td></tr><tr><td>patient-060</td><td>French</td><td>40-64</td><td>No A1c on file</td><td><span class="pill pill-risk">Gap</span></td><td>phone_or_sms</td></tr></tbody></table>
           <div class="table-pager">
             <span data-page-summary></span>
             <div class="pager-actions">
@@ -1569,6 +1672,7 @@
             </div>
           </div>
         </section>
+
       </section>
 
       <footer class="portfolio-footer" aria-label="Project owner and links">
@@ -1978,7 +2082,13 @@
         if (!payload.ok) {
           throw new Error(payload.failed_command || "local load failed");
         }
-        log.textContent = `${new Date().toLocaleTimeString()} real load complete: load #${payload.load_number}, ${payload.patient_count} synthetic patients. Refresh this page to view regenerated marts and reports.`;
+        log.textContent = `${new Date().toLocaleTimeString()} real load complete: load #${payload.load_number}, ${payload.patient_count} synthetic patients, variation seed ${payload.variation_seed}. Reloading refreshed dashboard artifacts.`;
+        const nextUrl = new URL("/dashboards/static_preview.html", window.location.origin);
+        nextUrl.searchParams.set("view", "process");
+        nextUrl.searchParams.set("health", "closed");
+        nextUrl.searchParams.set("load", String(payload.load_number));
+        nextUrl.searchParams.set("t", String(Date.now()));
+        window.location.href = nextUrl.toString();
       } catch (error) {
         log.textContent = `${new Date().toLocaleTimeString()} real load unavailable: start the local server with 'uv run python -m scripts.dashboard_control_server', then open http://127.0.0.1:8765/. Detail: ${error.message}`;
       } finally {
@@ -1987,7 +2097,12 @@
       }
     }
 
-    document.querySelector("[data-open-monitor]").addEventListener("click", openMonitorModal);
+    document.querySelectorAll("[data-open-monitor]").forEach((button) => {
+      button.addEventListener("click", openMonitorModal);
+    });
+    document.querySelectorAll("[data-hero-view]").forEach((button) => {
+      button.addEventListener("click", () => setDashboardView(button.getAttribute("data-hero-view")));
+    });
     document.querySelector("[data-close-monitor]").addEventListener("click", () => {
       modal.classList.remove("open");
       modal.setAttribute("aria-hidden", "true");
