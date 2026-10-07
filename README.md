@@ -12,7 +12,7 @@ This project is intentionally small, low-cost, and runnable. It demonstrates the
 
 This repo is a portfolio-grade healthcare data engineering demo. It uses synthetic FHIR-shaped data to show how multi-source clinical records can be ingested, validated, quarantined, modeled with dbt, tested, privacy-masked, and surfaced in stakeholder-ready dashboards.
 
-Run `.\scripts\demo.ps1`, then open `dashboards/static_preview.html` and `dashboards/fhir_mapping_workbench.html`.
+Run `powershell -ExecutionPolicy Bypass -File .\scripts\run_demo_dashboard.ps1`, then open `http://127.0.0.1:8765/`. The generated artifacts are `dashboards/static_preview.html` and `dashboards/fhir_mapping_workbench.html`.
 
 What to notice:
 
