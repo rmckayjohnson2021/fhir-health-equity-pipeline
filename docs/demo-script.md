@@ -145,6 +145,7 @@ Explain:
 
 - OpenTelemetry spans are emitted to the console for batches, source files, loaded resources, and quarantined resources.
 - The chaos injector adds a controlled synthetic bad event so the trace includes an error path.
+- The dashboard preview includes an OpenTelemetry Trace Dashboard that presents the same run pattern as a local span waterfall.
 - This stays local and free; no paid monitoring backend is required.
 
 ### 6. Gold Promotion Review
@@ -202,6 +203,7 @@ Explain:
 - The `Run slow monitor` control animates a browser-side batch run through ingest, transform, quality, and gold promotion stages.
 - The `Dismiss all quarantined` action simulates exporting active quarantine records to an archive for later stewardship without changing gold marts.
 - Restart actions are simulated and logged in the browser as an operator workflow.
+- The OpenTelemetry Trace Dashboard panel shows span duration, status, attributes, and the quarantine/error path without a hosted tracing service.
 - In production, those controls would call an orchestrator or incident runbook instead of restarting directly from a static dashboard.
 
 ### 9. FHIR Mapping Workbench

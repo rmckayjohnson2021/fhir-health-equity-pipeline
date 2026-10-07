@@ -144,12 +144,14 @@ Show:
 - `Restart` actions
 - `Dismiss all quarantined`
 - Event log
+- OpenTelemetry Trace Dashboard panel
 
 Explain:
 
 - The slow monitor simulates a real-time batch run through ingest, transform, quality, and promotion stages.
 - Restart actions are browser-side simulations of what would be orchestrator/runbook actions in production.
 - Dismiss all quarantined simulates exporting active quarantine records to an archive for later stewardship and leaves gold marts unchanged.
+- The OpenTelemetry Trace Dashboard turns local span events into a readable waterfall with status, duration, and attributes.
 
 ## 7. Demonstrate Micro-Batches, Tracing, OpenTelemetry, and Chaos
 
@@ -184,6 +186,7 @@ Explain:
 
 - OpenTelemetry console spans are local and free.
 - The chaos injector adds a controlled bad event so the error path is visible.
+- The dashboard trace panel shows the same pattern without requiring a paid tracing backend.
 
 ## 8. Demonstrate Gold Promotion Review
 

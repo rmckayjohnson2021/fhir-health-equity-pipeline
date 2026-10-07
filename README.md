@@ -20,6 +20,7 @@ What to notice:
 - 39 dbt tests across bronze, silver, and gold models.
 - Dashboard views for current health, in-process operations, and detailed patient-level analysis.
 - Pipeline monitor with simulated restart, slow-run, quarantine archive, and event log controls.
+- OpenTelemetry Trace Dashboard showing span status, duration, attributes, and quarantine/error paths.
 - FHIR Mapping Workbench for R4/R4B/R5 mapping decisions and forced-conversion notes.
 - Privacy masking, last-known-good snapshots, unmapped blob provenance, OpenTelemetry-style traces, and chaos injection.
 
@@ -27,7 +28,7 @@ What to notice:
 
 1. **Synthetic multi-source FHIR pipeline**: Generates deterministic synthetic FHIR-shaped records, simulates multiple source adapters, validates payloads, lands raw records in DuckDB bronze, and quarantines invalid records with lineage.
 2. **dbt quality gates and gold marts**: Builds bronze, silver, and gold models, runs 39 dbt tests plus a custom A1c plausibility check, and creates care-gap, reliability, and masked patient-panel marts.
-3. **Operational dashboard and pipeline monitor**: Provides a three-view dark dashboard with a launch health modal, Current State, What's in process, Detailed view, hover windows, run fidelity trend, restart simulation, slow-run monitor, and quarantine archive action.
+3. **Operational dashboard and pipeline monitor**: Provides a three-view dark dashboard with a launch health modal, Current State, What's in process, Detailed view, hover windows, run fidelity trend, OpenTelemetry Trace Dashboard, restart simulation, slow-run monitor, and quarantine archive action.
 4. **FHIR Mapping Workbench**: Supports R4/R4B/R5 schema lookup, unmapped blob review, simulate-but-don't-apply migration, and forced-conversion decisions with audit notes.
 5. **Governance, privacy, and resilience artifacts**: Demonstrates a gold-promotion review queue, unmapped blob provenance drawer, PHI-minimization report, last-known-good snapshots, OpenTelemetry-style console traces, and bounded chaos injection.
 
@@ -41,7 +42,7 @@ What to notice:
 - An unmapped source drawer for blob data retained for provenance and future semantic mapping.
 - Privacy-masked analytics marts and a PHI-minimization report using synthetic data.
 - Last-known-good local data release snapshots after successful runs.
-- Optional OpenTelemetry console tracing and bounded chaos injection for pipeline observability demos.
+- Optional OpenTelemetry console tracing, dashboard trace visualization, and bounded chaos injection for pipeline observability demos.
 - A dashboard monitor modal with simulated restart actions for stalled pipeline workflows.
 - An interactive FHIR Mapping Workbench for version-aware schema lookup, mapping simulation, and forced-conversion notes.
 - A three-view dashboard layout: Current State, What's in process, and Detailed view.
@@ -180,7 +181,7 @@ To emit local OpenTelemetry spans and inject a bounded synthetic failure:
 .\scripts\batch_demo.ps1 -OtelConsole -ChaosScenario missing_id
 ```
 
-This writes console spans for batch processing, source files, loaded resources, quarantined resources, and the injected chaos event. It does not require a paid observability service.
+This writes console spans for batch processing, source files, loaded resources, quarantined resources, and the injected chaos event. The dashboard also includes an OpenTelemetry Trace Dashboard panel that visualizes the same local span pattern without requiring a paid observability service.
 
 To generate a larger scenario-rich dataset with expected real-world data issues:
 
@@ -285,7 +286,7 @@ Use the FHIR Mapping Workbench to compare R4/R4B/R5 schema support, inspect unma
 | Privacy posture | Masked mart and PHI-minimization report demonstrate synthetic-data masking patterns without claiming HIPAA compliance. |
 | Provenance for unmapped blobs | Unmapped source drawer retains blob hashes and semantic hints for future mapping. |
 | Interactive patient detail | Patient detail supports search, filters, date range, paging, sorting, and CSV export. |
-| Observability and chaos | Optional OpenTelemetry console spans and bounded chaos injection are available in the batch demo. |
+| Observability and chaos | Optional OpenTelemetry console spans, an OTel Trace Dashboard panel, and bounded chaos injection are available in the batch demo. |
 
 ## Portfolio Artifacts
 

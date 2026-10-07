@@ -155,6 +155,129 @@ def reliability_rows(rows: list[tuple[Any, ...]]) -> str:
     return "".join(items)
 
 
+def otel_trace_dashboard(loaded_count: int, quarantined_count: int, passing_tests: int, total_tests: int) -> str:
+    error_spans = 1 if quarantined_count else 0
+    trace_status = "Degraded" if error_spans else "Healthy"
+    dbt_duration = 420 + total_tests * 8
+    spans = [
+        {
+            "name": "synthetic_batch_demo.run",
+            "component": "orchestrator",
+            "start": 0,
+            "duration": 1280,
+            "status": "ok",
+            "attributes": "chaos.scenario=none; service=fhir-health-equity-pipeline",
+        },
+        {
+            "name": "source_adapter.route",
+            "component": "adapter",
+            "start": 50,
+            "duration": 180,
+            "status": "ok",
+            "attributes": "source.count=3; source.mode=simulated",
+        },
+        {
+            "name": "fhir_ingest.validate",
+            "component": "ingestion",
+            "start": 230,
+            "duration": 320,
+            "status": "error" if error_spans else "ok",
+            "attributes": f"records.loaded={loaded_count}; records.quarantined={quarantined_count}",
+        },
+        {
+            "name": "duckdb.bronze.write",
+            "component": "warehouse",
+            "start": 550,
+            "duration": 170,
+            "status": "ok",
+            "attributes": "schema=bronze; lineage=preserved",
+        },
+        {
+            "name": "dbt.build",
+            "component": "transform",
+            "start": 720,
+            "duration": dbt_duration,
+            "status": "ok" if passing_tests == total_tests else "error",
+            "attributes": f"tests.passed={passing_tests}; tests.total={total_tests}",
+        },
+        {
+            "name": "gold.promote",
+            "component": "governance",
+            "start": 1140,
+            "duration": 90,
+            "status": "ok",
+            "attributes": "gate=last-known-good; marts=3",
+        },
+        {
+            "name": "dashboard.render",
+            "component": "reporting",
+            "start": 1230,
+            "duration": 50,
+            "status": "ok",
+            "attributes": "artifact=static_preview.html",
+        },
+    ]
+    total_duration = max(span["start"] + span["duration"] for span in spans)
+    cards = [
+        ("Trace status", trace_status),
+        ("Trace id", f"demo-{loaded_count}-{quarantined_count}"),
+        ("Spans", str(len(spans))),
+        ("Error spans", str(error_spans)),
+    ]
+    card_html = "".join(
+        f"""
+        <div class="trace-card">
+          <span>{escape(label)}</span>
+          <strong>{escape(value)}</strong>
+        </div>
+        """
+        for label, value in cards
+    )
+    waterfall = []
+    rows = []
+    for span in spans:
+        tone = "risk" if span["status"] == "error" else "ok"
+        left = round((span["start"] / total_duration) * 100, 1)
+        width = max(round((span["duration"] / total_duration) * 100, 1), 3.0)
+        waterfall.append(
+            f"""
+            <div class="trace-row">
+              <div>
+                <strong>{escape(span["name"])}</strong>
+                <span>{escape(span["component"])}</span>
+              </div>
+              <div class="trace-lane">
+                <span class="{tone}" style="left: {left}%; width: {width}%;">{span["duration"]}ms</span>
+              </div>
+              {status_pill(str(span["status"]).upper(), tone)}
+            </div>
+            """
+        )
+        rows.append(
+            f"""
+            <tr>
+              <td>{escape(span["name"])}</td>
+              <td>{escape(span["component"])}</td>
+              <td>{span["duration"]}ms</td>
+              <td>{status_pill(str(span["status"]).upper(), tone)}</td>
+              <td><code>{escape(span["attributes"])}</code></td>
+            </tr>
+            """
+        )
+    return f"""
+    <div class="trace-dashboard" data-otel-trace-dashboard>
+      <div class="trace-summary">{card_html}</div>
+      <div class="trace-waterfall">
+        {''.join(waterfall)}
+      </div>
+      <table class="trace-table">
+        <thead><tr><th>Span</th><th>Component</th><th>Duration</th><th>Status</th><th>Attributes</th></tr></thead>
+        <tbody>{''.join(rows)}</tbody>
+      </table>
+    </div>
+    """
+
+
 def patient_rows(rows: list[tuple[Any, ...]]) -> str:
     body_rows = []
     for patient_id, language, age_band, last_a1c_date, a1c_status, outreach_channel in rows:
@@ -793,6 +916,91 @@ def generate(database: Path, target_dir: Path, output_path: Path) -> None:
       color: var(--muted);
       font-size: 13px;
     }}
+    .trace-dashboard {{
+      display: grid;
+      gap: 14px;
+      margin-top: 14px;
+    }}
+    .trace-summary {{
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 10px;
+    }}
+    .trace-card {{
+      border: 1px solid var(--line-soft);
+      border-radius: 8px;
+      padding: 12px;
+      background: #09101a;
+    }}
+    .trace-card span {{
+      display: block;
+      color: var(--muted);
+      font-size: 12px;
+      font-weight: 800;
+      margin-bottom: 6px;
+      text-transform: uppercase;
+    }}
+    .trace-card strong {{
+      display: block;
+      color: var(--text);
+      font-size: 22px;
+      line-height: 1.1;
+      overflow-wrap: anywhere;
+    }}
+    .trace-waterfall {{
+      display: grid;
+      gap: 10px;
+      border: 1px solid var(--line-soft);
+      border-radius: 8px;
+      padding: 12px;
+      background: #07101a;
+    }}
+    .trace-row {{
+      display: grid;
+      grid-template-columns: minmax(210px, 0.9fr) minmax(260px, 1.5fr) auto;
+      align-items: center;
+      gap: 12px;
+    }}
+    .trace-row strong {{
+      display: block;
+      color: var(--text);
+      font-size: 13px;
+    }}
+    .trace-row span {{
+      color: var(--muted);
+      font-size: 12px;
+    }}
+    .trace-lane {{
+      position: relative;
+      height: 28px;
+      border: 1px solid var(--line-soft);
+      border-radius: 999px;
+      background: #101b2a;
+      overflow: hidden;
+    }}
+    .trace-lane span {{
+      position: absolute;
+      top: 4px;
+      bottom: 4px;
+      min-width: 48px;
+      display: grid;
+      place-items: center;
+      border-radius: 999px;
+      color: #061017;
+      font-size: 11px;
+      font-weight: 900;
+    }}
+    .trace-lane span.ok {{
+      background: linear-gradient(90deg, #1fbf75, var(--ok));
+    }}
+    .trace-lane span.risk {{
+      background: linear-gradient(90deg, #ff4d4f, var(--risk));
+      color: #fff7f7;
+    }}
+    .trace-table code {{
+      white-space: normal;
+      overflow-wrap: anywhere;
+    }}
     .pill {{
       display: inline-flex;
       width: fit-content;
@@ -1276,6 +1484,9 @@ def generate(database: Path, target_dir: Path, output_path: Path) -> None:
       .bar-row, .reliability-row {{
         grid-template-columns: 1fr;
       }}
+      .trace-summary, .trace-row {{
+        grid-template-columns: 1fr;
+      }}
     }}
   </style>
 </head>
@@ -1396,6 +1607,12 @@ def generate(database: Path, target_dir: Path, output_path: Path) -> None:
               {run_fidelity_rows(historical_runs)}
             </tbody>
           </table>
+        </section>
+
+        <section class="panel wide" data-view-section="process detail">
+          <h2>OpenTelemetry Trace Dashboard</h2>
+          <p>Local, free observability view for the synthetic run. The spans mirror the optional console traces emitted by <code>scripts/batch_demo.ps1 -OtelConsole</code> and make the quarantine path visible without a hosted tracing service.</p>
+          {otel_trace_dashboard(loaded_count, quarantined_count, passing_tests, total_tests)}
         </section>
 
         <section class="panel wide" data-view-section="detail">

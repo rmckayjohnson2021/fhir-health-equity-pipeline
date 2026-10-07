@@ -474,6 +474,91 @@
       color: var(--muted);
       font-size: 13px;
     }
+    .trace-dashboard {
+      display: grid;
+      gap: 14px;
+      margin-top: 14px;
+    }
+    .trace-summary {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 10px;
+    }
+    .trace-card {
+      border: 1px solid var(--line-soft);
+      border-radius: 8px;
+      padding: 12px;
+      background: #09101a;
+    }
+    .trace-card span {
+      display: block;
+      color: var(--muted);
+      font-size: 12px;
+      font-weight: 800;
+      margin-bottom: 6px;
+      text-transform: uppercase;
+    }
+    .trace-card strong {
+      display: block;
+      color: var(--text);
+      font-size: 22px;
+      line-height: 1.1;
+      overflow-wrap: anywhere;
+    }
+    .trace-waterfall {
+      display: grid;
+      gap: 10px;
+      border: 1px solid var(--line-soft);
+      border-radius: 8px;
+      padding: 12px;
+      background: #07101a;
+    }
+    .trace-row {
+      display: grid;
+      grid-template-columns: minmax(210px, 0.9fr) minmax(260px, 1.5fr) auto;
+      align-items: center;
+      gap: 12px;
+    }
+    .trace-row strong {
+      display: block;
+      color: var(--text);
+      font-size: 13px;
+    }
+    .trace-row span {
+      color: var(--muted);
+      font-size: 12px;
+    }
+    .trace-lane {
+      position: relative;
+      height: 28px;
+      border: 1px solid var(--line-soft);
+      border-radius: 999px;
+      background: #101b2a;
+      overflow: hidden;
+    }
+    .trace-lane span {
+      position: absolute;
+      top: 4px;
+      bottom: 4px;
+      min-width: 48px;
+      display: grid;
+      place-items: center;
+      border-radius: 999px;
+      color: #061017;
+      font-size: 11px;
+      font-weight: 900;
+    }
+    .trace-lane span.ok {
+      background: linear-gradient(90deg, #1fbf75, var(--ok));
+    }
+    .trace-lane span.risk {
+      background: linear-gradient(90deg, #ff4d4f, var(--risk));
+      color: #fff7f7;
+    }
+    .trace-table code {
+      white-space: normal;
+      overflow-wrap: anywhere;
+    }
     .pill {
       display: inline-flex;
       width: fit-content;
@@ -957,6 +1042,9 @@
       .bar-row, .reliability-row {
         grid-template-columns: 1fr;
       }
+      .trace-summary, .trace-row {
+        grid-template-columns: 1fr;
+      }
     }
   </style>
 </head>
@@ -1258,6 +1346,176 @@
 
             </tbody>
           </table>
+        </section>
+
+        <section class="panel wide" data-view-section="process detail">
+          <h2>OpenTelemetry Trace Dashboard</h2>
+          <p>Local, free observability view for the synthetic run. The spans mirror the optional console traces emitted by <code>scripts/batch_demo.ps1 -OtelConsole</code> and make the quarantine path visible without a hosted tracing service.</p>
+
+    <div class="trace-dashboard" data-otel-trace-dashboard>
+      <div class="trace-summary">
+        <div class="trace-card">
+          <span>Trace status</span>
+          <strong>Degraded</strong>
+        </div>
+
+        <div class="trace-card">
+          <span>Trace id</span>
+          <strong>demo-347-1</strong>
+        </div>
+
+        <div class="trace-card">
+          <span>Spans</span>
+          <strong>7</strong>
+        </div>
+
+        <div class="trace-card">
+          <span>Error spans</span>
+          <strong>1</strong>
+        </div>
+        </div>
+      <div class="trace-waterfall">
+
+            <div class="trace-row">
+              <div>
+                <strong>synthetic_batch_demo.run</strong>
+                <span>orchestrator</span>
+              </div>
+              <div class="trace-lane">
+                <span class="ok" style="left: 0.0%; width: 88.2%;">1280ms</span>
+              </div>
+              <span class="pill pill-ok">OK</span>
+            </div>
+
+            <div class="trace-row">
+              <div>
+                <strong>source_adapter.route</strong>
+                <span>adapter</span>
+              </div>
+              <div class="trace-lane">
+                <span class="ok" style="left: 3.4%; width: 12.4%;">180ms</span>
+              </div>
+              <span class="pill pill-ok">OK</span>
+            </div>
+
+            <div class="trace-row">
+              <div>
+                <strong>fhir_ingest.validate</strong>
+                <span>ingestion</span>
+              </div>
+              <div class="trace-lane">
+                <span class="risk" style="left: 15.8%; width: 22.0%;">320ms</span>
+              </div>
+              <span class="pill pill-risk">ERROR</span>
+            </div>
+
+            <div class="trace-row">
+              <div>
+                <strong>duckdb.bronze.write</strong>
+                <span>warehouse</span>
+              </div>
+              <div class="trace-lane">
+                <span class="ok" style="left: 37.9%; width: 11.7%;">170ms</span>
+              </div>
+              <span class="pill pill-ok">OK</span>
+            </div>
+
+            <div class="trace-row">
+              <div>
+                <strong>dbt.build</strong>
+                <span>transform</span>
+              </div>
+              <div class="trace-lane">
+                <span class="ok" style="left: 49.6%; width: 50.4%;">732ms</span>
+              </div>
+              <span class="pill pill-ok">OK</span>
+            </div>
+
+            <div class="trace-row">
+              <div>
+                <strong>gold.promote</strong>
+                <span>governance</span>
+              </div>
+              <div class="trace-lane">
+                <span class="ok" style="left: 78.5%; width: 6.2%;">90ms</span>
+              </div>
+              <span class="pill pill-ok">OK</span>
+            </div>
+
+            <div class="trace-row">
+              <div>
+                <strong>dashboard.render</strong>
+                <span>reporting</span>
+              </div>
+              <div class="trace-lane">
+                <span class="ok" style="left: 84.7%; width: 3.4%;">50ms</span>
+              </div>
+              <span class="pill pill-ok">OK</span>
+            </div>
+
+      </div>
+      <table class="trace-table">
+        <thead><tr><th>Span</th><th>Component</th><th>Duration</th><th>Status</th><th>Attributes</th></tr></thead>
+        <tbody>
+            <tr>
+              <td>synthetic_batch_demo.run</td>
+              <td>orchestrator</td>
+              <td>1280ms</td>
+              <td><span class="pill pill-ok">OK</span></td>
+              <td><code>chaos.scenario=none; service=fhir-health-equity-pipeline</code></td>
+            </tr>
+
+            <tr>
+              <td>source_adapter.route</td>
+              <td>adapter</td>
+              <td>180ms</td>
+              <td><span class="pill pill-ok">OK</span></td>
+              <td><code>source.count=3; source.mode=simulated</code></td>
+            </tr>
+
+            <tr>
+              <td>fhir_ingest.validate</td>
+              <td>ingestion</td>
+              <td>320ms</td>
+              <td><span class="pill pill-risk">ERROR</span></td>
+              <td><code>records.loaded=347; records.quarantined=1</code></td>
+            </tr>
+
+            <tr>
+              <td>duckdb.bronze.write</td>
+              <td>warehouse</td>
+              <td>170ms</td>
+              <td><span class="pill pill-ok">OK</span></td>
+              <td><code>schema=bronze; lineage=preserved</code></td>
+            </tr>
+
+            <tr>
+              <td>dbt.build</td>
+              <td>transform</td>
+              <td>732ms</td>
+              <td><span class="pill pill-ok">OK</span></td>
+              <td><code>tests.passed=39; tests.total=39</code></td>
+            </tr>
+
+            <tr>
+              <td>gold.promote</td>
+              <td>governance</td>
+              <td>90ms</td>
+              <td><span class="pill pill-ok">OK</span></td>
+              <td><code>gate=last-known-good; marts=3</code></td>
+            </tr>
+
+            <tr>
+              <td>dashboard.render</td>
+              <td>reporting</td>
+              <td>50ms</td>
+              <td><span class="pill pill-ok">OK</span></td>
+              <td><code>artifact=static_preview.html</code></td>
+            </tr>
+            </tbody>
+      </table>
+    </div>
+
         </section>
 
         <section class="panel wide" data-view-section="detail">

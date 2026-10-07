@@ -41,6 +41,8 @@ class PortfolioContractTests(unittest.TestCase):
             "Dismiss all quarantined",
             "quarantine_archive",
             "Run Fidelity Trend",
+            "OpenTelemetry Trace Dashboard",
+            "data-otel-trace-dashboard",
             "data-patient-table",
             "Export CSV",
             "data-start-date",
