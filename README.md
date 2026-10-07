@@ -173,7 +173,7 @@ On Windows:
 .\scripts\demo.ps1
 ```
 
-If PowerShell blocks local scripts, use the one-command launcher with a process-scoped bypass:
+If PowerShell blocks local scripts, use the one-command launcher with a process-scoped bypass. This does not require Administrator privileges.
 
 ```powershell
 powershell -ExecutionPolicy Bypass -File .\scripts\run_demo_dashboard.ps1
