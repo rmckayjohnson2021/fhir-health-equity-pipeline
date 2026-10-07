@@ -385,16 +385,43 @@ def otel_trace_dashboard(loaded_count: int, quarantined_count: int, passing_test
 
 def patient_rows(rows: list[tuple[Any, ...]]) -> str:
     body_rows = []
-    for patient_id, language, age_band, last_a1c_date, a1c_status, outreach_channel in rows:
+    for (
+        patient_id,
+        masked_patient_key,
+        source_system,
+        language,
+        age_band,
+        last_a1c_date,
+        a1c_status,
+        outreach_channel,
+        zip3_masked,
+        a1c_value_band,
+        has_contact_method,
+    ) in rows:
         tone = "risk" if a1c_status == "Gap" else "ok"
+        record = {
+            "patient_id": str(patient_id),
+            "masked_patient_key": str(masked_patient_key),
+            "source_system": display_source_label(source_system),
+            "preferred_language": str(language),
+            "age_band": str(age_band),
+            "last_a1c_date": str(last_a1c_date),
+            "a1c_status": str(a1c_status),
+            "outreach_channel": str(outreach_channel),
+            "zip3_masked": str(zip3_masked),
+            "a1c_value_band": str(a1c_value_band),
+            "has_contact_method": str(has_contact_method),
+        }
+        record_json = escape(json.dumps(record, sort_keys=True))
         body_rows.append(
-            "<tr>"
+            f'<tr data-patient-record="{record_json}">'
             f"<td>{escape(str(patient_id))}</td>"
             f"<td>{escape(str(language))}</td>"
             f"<td>{escape(str(age_band))}</td>"
             f"<td>{escape(str(last_a1c_date))}</td>"
             f"<td>{status_pill(str(a1c_status), tone)}</td>"
             f"<td>{escape(str(outreach_channel))}</td>"
+            '<td><button class="row-action" type="button" data-view-patient>View</button></td>'
             "</tr>"
         )
     return (
@@ -405,6 +432,7 @@ def patient_rows(rows: list[tuple[Any, ...]]) -> str:
         '<th><button type="button" data-sort-column="3">Last A1c</button></th>'
         '<th><button type="button" data-sort-column="4">Status</button></th>'
         '<th><button type="button" data-sort-column="5">Outreach</button></th>'
+        "<th>Record</th>"
         "</tr></thead><tbody>"
         + "".join(body_rows)
         + "</tbody></table>"
@@ -501,11 +529,28 @@ def generate(database: Path, target_dir: Path, quarantine_dir: Path, output_path
             """
             select
                 patient_id,
+                concat('PAT-', upper(left(sha256(patient_id), 10))) as masked_patient_key,
+                source_system,
                 preferred_language,
                 age_band,
                 coalesce(cast(last_a1c_date as varchar), 'No A1c on file') as last_a1c_date,
                 case when is_missing_recent_a1c then 'Gap' else 'Current' end as a1c_status,
-                outreach_channel
+                outreach_channel,
+                case
+                    when postal_code is null then null
+                    else concat(left(postal_code, 3), 'XX')
+                end as zip3_masked,
+                case
+                    when last_a1c_value is null then 'missing'
+                    when last_a1c_value < 7 then '<7'
+                    when last_a1c_value < 8 then '7-7.9'
+                    when last_a1c_value < 9 then '8-8.9'
+                    else '9+'
+                end as a1c_value_band,
+                case
+                    when outreach_channel = 'phone_or_sms' then true
+                    else false
+                end as has_contact_method
             from main_gold.mart_diabetes_care_gaps
             order by patient_id
             """,
@@ -1637,6 +1682,22 @@ def generate(database: Path, target_dir: Path, quarantine_dir: Path, output_path
       border-color: rgba(24, 213, 238, 0.72);
       background: rgba(24, 213, 238, 0.18);
     }}
+    .row-action {{
+      border: 1px solid rgba(24, 213, 238, 0.36);
+      border-radius: 8px;
+      background: rgba(24, 213, 238, 0.11);
+      color: #d7fbff;
+      cursor: pointer;
+      font: inherit;
+      font-size: 12px;
+      font-weight: 900;
+      min-height: 30px;
+      padding: 5px 10px;
+    }}
+    .row-action:hover {{
+      border-color: rgba(24, 213, 238, 0.72);
+      background: rgba(24, 213, 238, 0.18);
+    }}
     .table-result-count {{
       color: var(--muted);
       font-size: 12px;
@@ -1682,6 +1743,29 @@ def generate(database: Path, target_dir: Path, quarantine_dir: Path, output_path
       font-family: ui-monospace, SFMono-Regular, Consolas, "Liberation Mono", monospace;
       font-size: 12px;
     }}
+    .record-detail-grid {{
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 10px;
+    }}
+    .record-detail-item {{
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: #0d1521;
+      padding: 12px;
+      min-width: 0;
+    }}
+    .record-detail-item span {{
+      display: block;
+      color: var(--muted);
+      font-size: 12px;
+      margin-bottom: 6px;
+    }}
+    .record-detail-item strong {{
+      display: block;
+      color: var(--text);
+      overflow-wrap: anywhere;
+    }}
     @media (max-width: 1040px) {{
       .app-shell {{
         grid-template-columns: 1fr;
@@ -1715,6 +1799,9 @@ def generate(database: Path, target_dir: Path, quarantine_dir: Path, output_path
         grid-template-columns: 1fr;
       }}
       .health-status, .health-grid {{
+        grid-template-columns: 1fr;
+      }}
+      .record-detail-grid {{
         grid-template-columns: 1fr;
       }}
       .archive-panel {{
@@ -2011,10 +2098,27 @@ def generate(database: Path, target_dir: Path, quarantine_dir: Path, output_path
       </div>
     </section>
   </div>
+  <div class="modal-backdrop" data-patient-record-modal aria-hidden="true">
+    <section class="modal" role="dialog" aria-modal="true" aria-labelledby="patient-record-title">
+      <div class="modal-header">
+        <div>
+          <h2 id="patient-record-title">Patient Record Detail</h2>
+          <span>Single synthetic record view with masked analytics fields</span>
+        </div>
+        <button class="modal-close" type="button" data-close-patient-record>Close</button>
+      </div>
+      <div class="modal-body">
+        <div class="record-detail-grid" data-patient-record-detail></div>
+        <p class="footer-note">This modal is synthetic-only. The masked key, ZIP3, A1c band, and contact flag mirror privacy-minimized gold analytics fields.</p>
+      </div>
+    </section>
+  </div>
   <div class="floating-tooltip" data-floating-tooltip role="tooltip"></div>
   <script>
     const modal = document.querySelector("[data-monitor-modal]");
     const healthModal = document.querySelector("[data-health-modal]");
+    const patientRecordModal = document.querySelector("[data-patient-record-modal]");
+    const patientRecordDetail = document.querySelector("[data-patient-record-detail]");
     const log = document.querySelector("[data-event-log]");
     const tooltip = document.querySelector("[data-floating-tooltip]");
     const liveRunButton = document.querySelector("[data-live-run]");
@@ -2107,6 +2211,36 @@ def generate(database: Path, target_dir: Path, quarantine_dir: Path, output_path
     function closeHealthModal() {{
       healthModal.classList.remove("open");
       healthModal.setAttribute("aria-hidden", "true");
+    }}
+
+    function closePatientRecordModal() {{
+      patientRecordModal.classList.remove("open");
+      patientRecordModal.setAttribute("aria-hidden", "true");
+    }}
+
+    function openPatientRecordModal(row) {{
+      const record = JSON.parse(row.getAttribute("data-patient-record"));
+      const fields = [
+        ["Synthetic patient id", record.patient_id],
+        ["Masked patient key", record.masked_patient_key],
+        ["Source feed*", record.source_system],
+        ["Preferred language", record.preferred_language],
+        ["Age band", record.age_band],
+        ["Masked ZIP3", record.zip3_masked],
+        ["Last A1c", record.last_a1c_date],
+        ["A1c status", record.a1c_status],
+        ["A1c value band", record.a1c_value_band],
+        ["Outreach channel", record.outreach_channel],
+        ["Contact method available", record.has_contact_method],
+      ];
+      patientRecordDetail.innerHTML = fields.map(([label, value]) => `
+        <div class="record-detail-item">
+          <span>${{label}}</span>
+          <strong>${{value}}</strong>
+        </div>
+      `).join("");
+      patientRecordModal.classList.add("open");
+      patientRecordModal.setAttribute("aria-hidden", "false");
     }}
 
     function openMonitorModal() {{
@@ -2216,7 +2350,7 @@ def generate(database: Path, target_dir: Path, quarantine_dir: Path, output_path
     function exportPatientCsv() {{
       const headers = ["Patient", "Language", "Age band", "Last A1c", "Status", "Outreach"];
       const rows = visiblePatientRows().map((row) =>
-        Array.from(row.children).map((cell) => csvEscape(cell.innerText.trim())).join(",")
+        Array.from(row.children).slice(0, 6).map((cell) => csvEscape(cell.innerText.trim())).join(",")
       );
       const csv = [headers.map(csvEscape).join(","), ...rows].join("\\n");
       const blob = new Blob([csv], {{ type: "text/csv;charset=utf-8" }});
@@ -2257,6 +2391,9 @@ def generate(database: Path, target_dir: Path, quarantine_dir: Path, output_path
       paginatePatientRows();
     }});
     exportPatients.addEventListener("click", exportPatientCsv);
+    document.querySelectorAll("[data-view-patient]").forEach((button) => {{
+      button.addEventListener("click", () => openPatientRecordModal(button.closest("tr")));
+    }});
     document.querySelectorAll("[data-sort-column]").forEach((button) => {{
       button.addEventListener("click", () => sortPatientTable(Number(button.getAttribute("data-sort-column"))));
     }});
@@ -2340,6 +2477,7 @@ def generate(database: Path, target_dir: Path, quarantine_dir: Path, output_path
       modal.setAttribute("aria-hidden", "true");
     }});
     document.querySelector("[data-close-health]").addEventListener("click", closeHealthModal);
+    document.querySelector("[data-close-patient-record]").addEventListener("click", closePatientRecordModal);
     document.querySelectorAll("[data-health-view]").forEach((button) => {{
       button.addEventListener("click", () => {{
         setDashboardView(button.getAttribute("data-health-view"));
@@ -2360,6 +2498,11 @@ def generate(database: Path, target_dir: Path, quarantine_dir: Path, output_path
     healthModal.addEventListener("click", (event) => {{
       if (event.target === healthModal) {{
         closeHealthModal();
+      }}
+    }});
+    patientRecordModal.addEventListener("click", (event) => {{
+      if (event.target === patientRecordModal) {{
+        closePatientRecordModal();
       }}
     }});
     document.querySelectorAll("[data-restart]").forEach((button) => {{

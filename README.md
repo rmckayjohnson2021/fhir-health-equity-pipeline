@@ -56,7 +56,7 @@ Use What's in process for operational review: pipeline stages, source feed rollu
 
 ![Detailed dashboard view with patient-level controls](dashboards/screenshots/dashboard-detail-view.png)
 
-Use Detailed view when you want everything: English-first language segmentation, age-band distribution, failed-record masking detail, source rollups, fidelity trend, OTel tracing, and the patient-level care-gap table with search, filters, date range, paging, sorting, and CSV export.
+Use Detailed view when you want everything: English-first language segmentation, age-band distribution, failed-record masking detail, source rollups, fidelity trend, OTel tracing, and the patient-level care-gap table with search, filters, date range, paging, sorting, CSV export, and a single-record `View` modal with masked analytics fields.
 
 ## Mapping Workbench Preview
 
@@ -71,6 +71,7 @@ Use the FHIR Mapping Workbench to compare R4/R4B/R5 schema support, inspect unma
 - Raw bronze landing with source lineage.
 - Quarantine handling for invalid records.
 - Row-level failed-record detail with masked payload previews for stewardship review.
+- Single-patient record inspection from the detailed care-gap table.
 - A gold-promotion review queue for records that should not feed dashboard-ready marts.
 - An unmapped source drawer for blob data retained for provenance and future semantic mapping.
 - Privacy-masked analytics marts and a PHI-minimization report using synthetic data.
@@ -171,6 +172,14 @@ On Windows:
 ```powershell
 .\scripts\demo.ps1
 ```
+
+If PowerShell blocks local scripts, use the one-command launcher with a process-scoped bypass:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\scripts\run_demo_dashboard.ps1
+```
+
+That launcher runs the demo, starts the local dashboard control server, and opens `http://127.0.0.1:8765/`.
 
 On systems with `make`:
 
@@ -296,7 +305,7 @@ Open `dashboards/static_preview.html` after running the demo to view the current
 | Data quality and fidelity | dbt tests, triage report, run fidelity trend, and last-known-good snapshots are included. |
 | Privacy posture | Masked mart and PHI-minimization report demonstrate synthetic-data masking patterns without claiming HIPAA compliance. |
 | Provenance for unmapped blobs | Unmapped source drawer retains blob hashes and semantic hints for future mapping. |
-| Interactive patient detail | Patient detail supports search, filters, date range, paging, sorting, and CSV export. |
+| Interactive patient detail | Patient detail supports search, filters, date range, paging, sorting, CSV export, and single-record inspection with masked analytics fields. |
 | Observability and chaos | Optional OpenTelemetry console spans, an OTel Trace Dashboard panel, and bounded chaos injection are available in the batch demo. |
 
 ## Portfolio Artifacts

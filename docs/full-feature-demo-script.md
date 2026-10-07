@@ -155,6 +155,7 @@ Explain:
 - Dismiss all quarantined simulates exporting active quarantine records to an archive for later stewardship and leaves gold marts unchanged.
 - The OpenTelemetry Trace Dashboard turns local span events into a readable waterfall with status, duration, and attributes.
 - Detailed view shows individual quarantined records with masked failed-payload previews.
+- The patient-level table includes a `View` action to open one synthetic patient record with masked analytics fields.
 
 ## 7. Demonstrate Micro-Batches, Tracing, OpenTelemetry, and Chaos
 

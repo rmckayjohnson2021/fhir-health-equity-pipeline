@@ -13,7 +13,7 @@ Gold promotion means the data is safe enough to appear in dashboard-ready marts.
 
 | Issue | Source | Resource | Reason | Decision | Evidence |
 |---|---|---|---|---|---|
-| `quarantine-legacy_pms_simulated-Observation-1` | `legacy_pms_simulated` | `Observation/missing-id` | missing required FHIR resource id | `request_source_correction` | `data\raw\legacy_pms_simulated\fhir.ndjson:117` |
+| `quarantine-legacy_pms_simulated-Observation-1` | `legacy_pms_simulated` | `Observation/missing-id` | missing required FHIR resource id | `request_source_correction` | `data\batches\batch_012\legacy_pms_simulated\fhir.ndjson:41` |
 
 ## Decision Options
 

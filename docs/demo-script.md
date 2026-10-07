@@ -213,6 +213,7 @@ Explain:
 - Restart actions are simulated and logged in the browser as an operator workflow.
 - The OpenTelemetry Trace Dashboard panel shows span duration, status, attributes, and the quarantine/error path without a hosted tracing service.
 - Detailed view shows individual quarantined records with masked failed-payload previews for stewardship review.
+- The patient-level table has a `View` action for inspecting one synthetic patient at a time with masked analytics fields.
 - In production, those controls would call an orchestrator or incident runbook instead of restarting directly from a static dashboard.
 
 ### 9. FHIR Mapping Workbench
