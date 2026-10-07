@@ -339,8 +339,11 @@ document.querySelector('[data-metric="missing"]').textContent = metrics.missing;
 document.querySelector('[data-metric="rate"]').textContent = `${metrics.rate}%`;
 document.querySelector('[data-metric="unmapped"]').textContent = metrics.unmapped;
 
-function pill(status) {
-  return `<span class="pill pill-${status}">${status}</span>`;
+function pillElement(status) {
+  const span = document.createElement("span");
+  span.className = `pill pill-${status}`;
+  span.textContent = status;
+  return span;
 }
 
 function activeBlob() {
@@ -354,18 +357,33 @@ function activeSchema() {
 function renderSchema() {
   const schema = activeSchema();
   const query = schemaSearch.value.toLowerCase();
-  const rows = [];
+  schemaResults.replaceChildren();
+  const summary = document.createElement("p");
+  summary.textContent = `${versionSelect.value} ${schema.release} - ${schema.status}`;
+  schemaResults.appendChild(summary);
   Object.entries(schema.resources).forEach(([resource, fields]) => {
     const matches = resource.toLowerCase().includes(query) || fields.some((field) => field.toLowerCase().includes(query));
     if (matches || !query) {
-      rows.push(`<div class="schema-card"><strong>${resource}</strong><code>${fields.join(", ")}</code></div>`);
+      const card = document.createElement("div");
+      const title = document.createElement("strong");
+      const code = document.createElement("code");
+      card.className = "schema-card";
+      title.textContent = resource;
+      code.textContent = fields.join(", ");
+      card.append(title, code);
+      schemaResults.appendChild(card);
     }
   });
-  schemaResults.innerHTML = `<p>${versionSelect.value} ${schema.release} - ${schema.status}</p>` + rows.join("");
 }
 
 function renderBlobOptions() {
-  blobSelect.innerHTML = blobs.map((blob) => `<option value="${blob.id}">${blob.label} - ${blob.source_system}</option>`).join("");
+  blobSelect.replaceChildren();
+  blobs.forEach((blob) => {
+    const option = document.createElement("option");
+    option.value = blob.id;
+    option.textContent = `${blob.label} - ${blob.source_system}`;
+    blobSelect.appendChild(option);
+  });
 }
 
 function renderBlob() {
@@ -377,22 +395,45 @@ function renderMappings() {
   const schema = activeSchema();
   const blob = activeBlob();
   selectedForcedFields.clear();
-  mappingTable.innerHTML = Object.entries(blob.fields).map(([field]) => {
+  mappingTable.replaceChildren();
+  Object.entries(blob.fields).forEach(([field]) => {
     const support = schema.mappingSupport[field] || {
       status: "blocked",
       target: "No governed target",
       reason: "The local schema subset has no mapping for this field."
     };
-    const options = forcedTargetTypes.map((targetType) => `<option value="${targetType}">${targetType}</option>`).join("");
-    return `<tr>
-      <td><code>${field}</code></td>
-      <td>${pill(support.status)}</td>
-      <td>${support.target}</td>
-      <td><select data-force-target="${field}" disabled>${options}</select></td>
-      <td>${support.reason}</td>
-      <td><input type="checkbox" data-force-field="${field}" aria-label="Force ${field}"></td>
-    </tr>`;
-  }).join("");
+    const row = document.createElement("tr");
+    const fieldCell = document.createElement("td");
+    const fieldCode = document.createElement("code");
+    const statusCell = document.createElement("td");
+    const targetCell = document.createElement("td");
+    const forcedTypeCell = document.createElement("td");
+    const reasonCell = document.createElement("td");
+    const forceCell = document.createElement("td");
+    const targetSelect = document.createElement("select");
+    const checkbox = document.createElement("input");
+
+    fieldCode.textContent = field;
+    fieldCell.appendChild(fieldCode);
+    statusCell.appendChild(pillElement(support.status));
+    targetCell.textContent = support.target;
+    targetSelect.setAttribute("data-force-target", field);
+    targetSelect.disabled = true;
+    forcedTargetTypes.forEach((targetType) => {
+      const option = document.createElement("option");
+      option.value = targetType;
+      option.textContent = targetType;
+      targetSelect.appendChild(option);
+    });
+    forcedTypeCell.appendChild(targetSelect);
+    reasonCell.textContent = support.reason;
+    checkbox.type = "checkbox";
+    checkbox.setAttribute("data-force-field", field);
+    checkbox.setAttribute("aria-label", `Force ${field}`);
+    forceCell.appendChild(checkbox);
+    row.append(fieldCell, statusCell, targetCell, forcedTypeCell, reasonCell, forceCell);
+    mappingTable.appendChild(row);
+  });
   document.querySelectorAll("[data-force-field]").forEach((checkbox) => {
     const field = checkbox.getAttribute("data-force-field");
     const targetSelect = document.querySelector(`[data-force-target="${field}"]`);

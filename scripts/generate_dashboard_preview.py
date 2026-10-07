@@ -2162,7 +2162,7 @@ def generate(database: Path, target_dir: Path, quarantine_dir: Path, output_path
 
     document.querySelectorAll("[data-tooltip]").forEach((target) => {{
       target.addEventListener("mouseenter", () => {{
-        tooltip.innerHTML = "";
+        tooltip.replaceChildren();
         const title = document.createElement("strong");
         title.textContent = target.getAttribute("data-tooltip-title") || "Operational note";
         const body = document.createElement("span");
@@ -2233,12 +2233,17 @@ def generate(database: Path, target_dir: Path, quarantine_dir: Path, output_path
         ["Outreach channel", record.outreach_channel],
         ["Contact method available", record.has_contact_method],
       ];
-      patientRecordDetail.innerHTML = fields.map(([label, value]) => `
-        <div class="record-detail-item">
-          <span>${{label}}</span>
-          <strong>${{value}}</strong>
-        </div>
-      `).join("");
+      patientRecordDetail.replaceChildren();
+      fields.forEach(([label, value]) => {{
+        const item = document.createElement("div");
+        const labelElement = document.createElement("span");
+        const valueElement = document.createElement("strong");
+        item.className = "record-detail-item";
+        labelElement.textContent = label;
+        valueElement.textContent = value;
+        item.append(labelElement, valueElement);
+        patientRecordDetail.appendChild(item);
+      }});
       patientRecordModal.classList.add("open");
       patientRecordModal.setAttribute("aria-hidden", "false");
     }}
