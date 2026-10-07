@@ -1,0 +1,54 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  demo:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
+
+      - name: Generate synthetic FHIR sample
+        run: uv run python -m scripts.generate_synthea_sample
+
+      - name: Ingest FHIR resources into DuckDB
+        run: uv run python -m scripts.ingest_fhir
+
+      - name: Ingest unmapped source blobs
+        run: uv run python -m scripts.ingest_unmapped_blobs --generate-sample --reset-table
+
+      - name: Run dbt build
+        working-directory: dbt_transforms
+        run: uv run dbt build --profiles-dir ../dbt_profiles
+
+      - name: Generate dbt docs artifacts
+        working-directory: dbt_transforms
+        run: uv run dbt docs generate --profiles-dir ../dbt_profiles
+
+      - name: Generate data quality triage report
+        run: uv run python -m scripts.triage_quality_failures
+
+      - name: Generate gold promotion review
+        run: uv run python -m scripts.review_gold_promotion
+
+      - name: Generate dashboard preview
+        run: uv run python -m scripts.generate_dashboard_preview
+
+      - name: Generate FHIR mapping workbench
+        run: uv run python -m scripts.generate_fhir_mapping_workbench
+
+      - name: Generate privacy masking report
+        run: uv run python -m scripts.generate_privacy_report
+
+      - name: Version last known good run
+        run: uv run python -m scripts.version_data_release
+
+      - name: Run portfolio contract tests
+        run: uv run python -m unittest discover -s tests

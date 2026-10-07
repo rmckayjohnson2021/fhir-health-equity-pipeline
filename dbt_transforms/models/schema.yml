@@ -1,0 +1,151 @@
+version: 2
+
+models:
+  - name: brz_fhir_resources
+    description: Raw valid FHIR resources loaded into DuckDB from simulated source feeds.
+    columns:
+      - name: source_system
+        tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: ['epic_simulated', 'athena_simulated', 'legacy_pms_simulated']
+      - name: resource_type
+        tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: ['Patient', 'Encounter', 'Condition', 'Observation', 'Appointment', 'Communication']
+      - name: resource_id
+        tests:
+          - not_null
+
+  - name: stg_fhir_patients
+    description: One row per synthetic FHIR Patient resource.
+    columns:
+      - name: patient_id
+        tests:
+          - not_null
+          - unique
+      - name: preferred_language_code
+        tests:
+          - not_null
+
+  - name: stg_fhir_encounters
+    description: Synthetic FHIR Encounter resources normalized for analytics.
+    columns:
+      - name: encounter_id
+        tests:
+          - not_null
+          - unique
+      - name: patient_id
+        tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('stg_fhir_patients')
+                field: patient_id
+
+  - name: stg_fhir_conditions
+    description: Synthetic FHIR Condition resources normalized for analytics.
+    columns:
+      - name: condition_id
+        tests:
+          - not_null
+          - unique
+      - name: patient_id
+        tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('stg_fhir_patients')
+                field: patient_id
+
+  - name: stg_fhir_observations
+    description: Synthetic FHIR Observation resources, including A1c values.
+    columns:
+      - name: observation_id
+        tests:
+          - not_null
+          - unique
+      - name: patient_id
+        tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('stg_fhir_patients')
+                field: patient_id
+      - name: observation_code
+        tests:
+          - accepted_values:
+              arguments:
+                values: ['4548-4']
+      - name: value_unit
+        tests:
+          - accepted_values:
+              arguments:
+                values: ['%']
+
+  - name: stg_fhir_appointments
+    description: Synthetic FHIR Appointment resources normalized for analytics.
+    columns:
+      - name: appointment_id
+        tests:
+          - not_null
+          - unique
+      - name: patient_id
+        tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('stg_fhir_patients')
+                field: patient_id
+
+  - name: stg_fhir_communications
+    description: Synthetic FHIR Communication resources normalized for outreach analytics.
+    columns:
+      - name: communication_id
+        tests:
+          - not_null
+          - unique
+      - name: patient_id
+        tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('stg_fhir_patients')
+                field: patient_id
+
+  - name: mart_diabetes_care_gaps
+    description: Dashboard-ready diabetes A1c care-gap mart segmented for health-equity analysis.
+    columns:
+      - name: patient_id
+        tests:
+          - not_null
+          - unique
+
+  - name: mart_pipeline_reliability
+    description: Dashboard-ready ingestion reliability metrics by source system and resource type.
+    columns:
+      - name: source_system
+        tests:
+          - not_null
+      - name: resource_type
+        tests:
+          - not_null
+
+  - name: mart_masked_patient_panel
+    description: Dashboard-ready masked patient panel that tokenizes patient identifiers and removes direct contact fields.
+    columns:
+      - name: masked_patient_key
+        tests:
+          - not_null
+          - unique
+      - name: zip3_masked
+        tests:
+          - not_null
+      - name: a1c_value_band
+        tests:
+          - accepted_values:
+              arguments:
+                values: ['missing', '<7', '7-7.9', '8-8.9', '9+']

@@ -1,0 +1,12 @@
+version: 2
+
+sources:
+  - name: bronze
+    schema: bronze
+    description: Raw synthetic FHIR landing tables produced by scripts.ingest_fhir.
+    tables:
+      - name: raw_fhir_resources
+        description: One row per valid raw FHIR resource loaded from simulated source feeds.
+      - name: ingestion_metrics
+        description: Per-source and per-resource ingestion counts, including quarantined records.
+

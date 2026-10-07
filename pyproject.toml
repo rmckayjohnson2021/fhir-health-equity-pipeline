@@ -1,0 +1,14 @@
+[project]
+name = "fhir-health-equity-pipeline"
+version = "0.1.0"
+description = "Local-first synthetic FHIR health-equity analytics pipeline."
+readme = "README.md"
+requires-python = ">=3.11,<3.13"
+dependencies = [
+    "dbt-duckdb>=1.9.0",
+    "duckdb>=1.1.0",
+    "opentelemetry-sdk>=1.37.0",
+]
+
+[tool.uv]
+package = false

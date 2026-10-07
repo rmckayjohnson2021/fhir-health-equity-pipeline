@@ -1,0 +1,64 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+.venv/
+venv/
+.env
+.env.*
+!.env.example
+
+# dbt
+dbt_transforms/target/
+dbt_transforms/dbt_packages/
+dbt_transforms/logs/
+dbt_profiles/.user.yml
+/profiles.yml
+
+# DuckDB / local warehouse files
+*.duckdb
+*.duckdb.wal
+*.db
+*.sqlite
+*.sqlite3
+
+# Generated data
+data/raw/
+data/batches/
+data/generated/
+data/quarantine/
+data/scenario_raw/
+data/unmapped_source/
+data/run_versions/
+data/work/
+*.ndjson
+*.parquet
+*.csv
+
+# Keep small curated samples if intentionally committed
+!data/sample/
+!data/sample/**
+
+# Reports generated locally
+reports/generated/
+reports/*.html
+
+# Metabase local state
+metabase-data/
+metabase.db/
+*.mv.db
+*.trace.db
+
+# Docker / local runtime
+.docker/
+docker-volumes/
+
+# OS / editor
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+
+# Logs
+*.log
+logs/

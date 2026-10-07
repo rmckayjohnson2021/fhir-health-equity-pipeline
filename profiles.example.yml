@@ -1,0 +1,17 @@
+fhir_health_equity:
+  target: duckdb_local
+  outputs:
+    duckdb_local:
+      type: duckdb
+      path: data/warehouse/health_equity.duckdb
+      threads: 4
+
+    # Optional future pattern only. Do not use for the local v1 demo.
+    bigquery_optional:
+      type: bigquery
+      method: service-account
+      project: your-gcp-project-id
+      dataset: fhir_health_equity
+      threads: 4
+      keyfile: /path/to/service-account.json
+

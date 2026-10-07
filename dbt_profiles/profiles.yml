@@ -1,0 +1,8 @@
+fhir_health_equity:
+  target: duckdb_local
+  outputs:
+    duckdb_local:
+      type: duckdb
+      path: ../data/warehouse/health_equity.duckdb
+      threads: 4
+
