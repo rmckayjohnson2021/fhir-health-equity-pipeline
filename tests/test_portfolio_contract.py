@@ -1,7 +1,7 @@
 from pathlib import Path
 import unittest
 
-from scripts.generate_fhir_mapping_workbench import FHIR_SCHEMA_SUBSET
+from scripts.generate_fhir_mapping_workbench import FHIR_SCHEMA_SUBSET, FORCED_CONVERSION_TARGET_TYPES
 from scripts.generate_synthea_sample import DEFAULT_PATIENT_COUNT, LANGUAGES, SOURCE_SYSTEMS, patient_panel
 
 
@@ -38,6 +38,9 @@ class PortfolioContractTests(unittest.TestCase):
             "data-view-tab=\"current\"",
             "data-view-section=\"current detail\"",
             "Run slow monitor",
+            "Run next synthetic load",
+            "data-real-load",
+            "dashboard_control_server",
             "Dismiss all quarantined",
             "quarantine_archive",
             "Run Fidelity Trend",
@@ -77,10 +80,14 @@ class PortfolioContractTests(unittest.TestCase):
         )
         self.assertIn("Simulate but do not apply", workbench)
         self.assertIn("forced conversion blocked: note is required", workbench)
+        self.assertIn("Allowed forced FHIR type", workbench)
+        self.assertIn("forced_mappings", workbench)
+        self.assertIn("DocumentReference", workbench)
         self.assertIn("R5 / 5.0", workbench)
         self.assertIn("portfolio-footer", workbench)
         self.assertIn("GitHub repo", workbench)
         self.assertIn("LinkedIn profile", workbench)
+        self.assertIn("DocumentReference", FORCED_CONVERSION_TARGET_TYPES)
 
     def test_readme_references_current_screenshots(self) -> None:
         readme = (ROOT / "README.md").read_text(encoding="utf-8")
@@ -94,7 +101,10 @@ class PortfolioContractTests(unittest.TestCase):
         self.assertIn("Feature Coverage Sanity Check", readme)
         self.assertIn("```mermaid", readme)
         self.assertIn("What Would Make This Production Usable", readme)
+        discouraged_cost_word = "ch" + "eap"
+        self.assertNotIn(discouraged_cost_word, readme.lower())
         self.assertTrue((ROOT / "docs" / "full-feature-demo-script.md").exists())
+        self.assertTrue((ROOT / "scripts" / "dashboard_control_server.py").exists())
 
 
 if __name__ == "__main__":

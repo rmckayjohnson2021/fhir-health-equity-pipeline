@@ -6,7 +6,7 @@
 
 Local-first synthetic healthcare data platform that turns FHIR-shaped records into tested dbt models, care-gap marts, pipeline reliability metrics, and a data quality triage report.
 
-This project is intentionally small, cheap, and runnable. It demonstrates the data platform patterns behind public healthcare analytics without using real patient data, paid cloud services, or real EHR vendor integrations.
+This project is intentionally small, low-cost, and runnable. It demonstrates the data platform patterns behind public healthcare analytics without using real patient data, paid cloud services, or real EHR vendor integrations.
 
 ## TL;DR
 
@@ -31,6 +31,38 @@ What to notice:
 3. **Operational dashboard and pipeline monitor**: Provides a three-view dark dashboard with a launch health modal, Current State, What's in process, Detailed view, hover windows, run fidelity trend, OpenTelemetry Trace Dashboard, restart simulation, slow-run monitor, and quarantine archive action.
 4. **FHIR Mapping Workbench**: Supports R4/R4B/R5 schema lookup, unmapped blob review, simulate-but-don't-apply migration, and forced-conversion decisions with audit notes.
 5. **Governance, privacy, and resilience artifacts**: Demonstrates a gold-promotion review queue, unmapped blob provenance drawer, PHI-minimization report, last-known-good snapshots, OpenTelemetry-style console traces, and bounded chaos injection.
+
+## Dashboard Preview
+
+### Launch System Health
+
+![System health launch modal for the FHIR Health Equity Pipeline](dashboards/screenshots/dashboard-system-health.png)
+
+The dashboard opens with this health check so a reviewer can immediately see run fidelity, loaded resources, quarantine count, care-gap signal, and source feed count. Use it to jump into Current State, the Pipeline Monitor, or the Detailed Dashboard.
+
+### Current State
+
+![Current State dashboard view for the FHIR Health Equity Pipeline](dashboards/screenshots/static-preview.png)
+
+Use Current State for the executive scan: cohort size, care-gap rate, dbt health, quarantine risk, care-gap signal, source-quality watchlist, and run fidelity trend.
+
+### What's In Process
+
+![What's in process dashboard view for the FHIR Health Equity Pipeline](dashboards/screenshots/dashboard-process-view.png)
+
+Use What's in process for operational review: pipeline stages, source feed rollup, source-quality watchlist, OTel trace waterfall, and fidelity trend. The Pipeline Monitor button opens simulated restart, slow-run, local synthetic-load, and quarantine archive controls.
+
+### Detailed View
+
+![Detailed dashboard view with patient-level controls](dashboards/screenshots/dashboard-detail-view.png)
+
+Use Detailed view when you want everything: language segmentation, source rollups, fidelity trend, OTel tracing, and the patient-level care-gap table with search, filters, date range, paging, sorting, and CSV export.
+
+## Mapping Workbench Preview
+
+![FHIR Mapping Workbench with version-aware mapping controls](dashboards/screenshots/fhir-mapping-workbench.png)
+
+Use the FHIR Mapping Workbench to compare R4/R4B/R5 schema support, inspect unmapped blob candidates, simulate a higher-version migration, choose a forced FHIR target type such as Observation, QuestionnaireResponse, ServiceRequest, Communication, DocumentReference, Extension, or Basic, and record forced conversion notes with an audit rationale.
 
 ## What This Project Demonstrates
 
@@ -167,6 +199,14 @@ To watch the same synthetic data land in micro-batches:
 
 The batch demo processes three small source batches, prints cumulative ingestion metrics after each batch, then rebuilds dbt models, the triage report, and the dashboard preview.
 
+To run the dashboard with a real local button that loads the next synthetic batch, start the local-only control server:
+
+```powershell
+uv run python -m scripts.dashboard_control_server
+```
+
+Then open `http://127.0.0.1:8765/`, choose `Open pipeline monitor`, and click `Run next synthetic load`. Each click advances through larger synthetic panels and refreshes the generated reports and dashboard artifacts. The button is intentionally local-only; the static HTML remains read-only when opened directly or viewed on GitHub.
+
 To show each synthetic FHIR resource as it maps toward analytics models:
 
 ```powershell
@@ -240,38 +280,6 @@ The care-gap mart includes a diabetes cohort with A1c freshness, preferred langu
 
 Open `dashboards/static_preview.html` after running the demo to view the current static dashboard preview.
 
-## Dashboard Preview
-
-### Launch System Health
-
-![System health launch modal for the FHIR Health Equity Pipeline](dashboards/screenshots/dashboard-system-health.png)
-
-The dashboard opens with this health check so a reviewer can immediately see run fidelity, loaded resources, quarantine count, care-gap signal, and source feed count. Use it to jump into Current State, the Pipeline Monitor, or the Detailed Dashboard.
-
-### Current State
-
-![Current State dashboard view for the FHIR Health Equity Pipeline](dashboards/screenshots/static-preview.png)
-
-Use Current State for the executive scan: cohort size, care-gap rate, dbt health, quarantine risk, care-gap signal, source-quality watchlist, and run fidelity trend.
-
-### What's In Process
-
-![What's in process dashboard view for the FHIR Health Equity Pipeline](dashboards/screenshots/dashboard-process-view.png)
-
-Use What's in process for operational review: pipeline stages, source feed rollup, source-quality watchlist, and fidelity trend. The Pipeline Monitor button opens the simulated restart, slow-run, and quarantine archive controls.
-
-### Detailed View
-
-![Detailed dashboard view with patient-level controls](dashboards/screenshots/dashboard-detail-view.png)
-
-Use Detailed view when you want everything: language segmentation, source rollups, fidelity trend, and the patient-level care-gap table with search, filters, date range, paging, sorting, and CSV export.
-
-## Mapping Workbench Preview
-
-![FHIR Mapping Workbench with version-aware mapping controls](dashboards/screenshots/fhir-mapping-workbench.png)
-
-Use the FHIR Mapping Workbench to compare R4/R4B/R5 schema support, inspect unmapped blob candidates, simulate a higher-version migration, and record forced conversion notes with an audit rationale.
-
 ## Feature Coverage Sanity Check
 
 | Suggested capability | Current repo coverage |
@@ -279,9 +287,9 @@ Use the FHIR Mapping Workbench to compare R4/R4B/R5 schema support, inspect unma
 | Synthetic-only FHIR pipeline | Deterministic local synthetic FHIR records with simulated source adapters only. |
 | Larger viable data sample | Default panel is 60 synthetic patients and 347 loaded FHIR resources. |
 | Professional dark dashboard | Generated dark dashboard with custom logo, author image, current screenshots, stakeholder-ready copy, and three dashboard views. |
-| Real-time style monitoring | Pipeline Monitor modal includes a slow staged run, restart actions, and event log. |
+| Real-time style monitoring | Pipeline Monitor modal includes a slow staged run, restart actions, a local synthetic-load control button, and event log. |
 | Quarantine operations | Invalid records are quarantined, reviewed for gold promotion, and can be dismissed into a simulated archive export. |
-| FHIR version mapping | Workbench supports R4, R4B, and R5 schema lookup, simulation, and forced conversion notes. |
+| FHIR version mapping | Workbench supports R4, R4B, and R5 schema lookup, simulation, forced FHIR target types, and forced conversion notes. |
 | Data quality and fidelity | dbt tests, triage report, run fidelity trend, and last-known-good snapshots are included. |
 | Privacy posture | Masked mart and PHI-minimization report demonstrate synthetic-data masking patterns without claiming HIPAA compliance. |
 | Provenance for unmapped blobs | Unmapped source drawer retains blob hashes and semantic hints for future mapping. |
@@ -292,6 +300,7 @@ Use the FHIR Mapping Workbench to compare R4/R4B/R5 schema support, inspect unma
 
 - `dashboards/static_preview.html`: generated dark-theme dashboard preview with hover windows, live monitor simulation, quarantine archive action, run fidelity trend, and sortable/exportable patient detail.
 - `dashboards/fhir_mapping_workbench.html`: interactive local FHIR mapping workbench.
+- `scripts/dashboard_control_server.py`: local-only dashboard server that enables the `Run next synthetic load` button.
 - `dashboards/screenshots/dashboard-system-health.png`: launch modal screenshot.
 - `dashboards/screenshots/static-preview.png`: screenshot for GitHub preview.
 - `dashboards/screenshots/dashboard-process-view.png`: operational process view screenshot.

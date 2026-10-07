@@ -18,6 +18,15 @@ PROJECT_ROLE = "Healthcare data platform builder"
 GITHUB_HANDLE = "rmckayjohnson2021"
 REPO_URL = "https://github.com/rmckayjohnson2021/fhir-health-equity-pipeline"
 LINKEDIN_URL = "https://www.linkedin.com/in/mckayjohnson/"
+FORCED_CONVERSION_TARGET_TYPES = (
+    "Observation",
+    "QuestionnaireResponse",
+    "ServiceRequest",
+    "Communication",
+    "DocumentReference",
+    "Extension",
+    "Basic",
+)
 
 FHIR_SCHEMA_SUBSET = {
     "R4": {
@@ -134,6 +143,7 @@ def generate(database: Path, output_path: Path) -> None:
     schema_json = json.dumps(FHIR_SCHEMA_SUBSET, sort_keys=True)
     blobs_json = json.dumps(SOURCE_BLOBS, sort_keys=True)
     metrics_json = json.dumps(metrics, sort_keys=True)
+    forced_target_json = json.dumps(FORCED_CONVERSION_TARGET_TYPES)
 
     html = f"""<!doctype html>
 <html lang="en">
@@ -384,7 +394,7 @@ def generate(database: Path, output_path: Path) -> None:
     <section class="panel wide">
       <h2>Mapping Candidates</h2>
       <table>
-        <thead><tr><th>Source field</th><th>Status</th><th>Proposed target</th><th>Reason</th><th>Force</th></tr></thead>
+        <thead><tr><th>Source field</th><th>Status</th><th>Proposed target</th><th>Allowed forced FHIR type</th><th>Reason</th><th>Force</th></tr></thead>
         <tbody data-mapping-table></tbody>
       </table>
       <div class="control-row" style="margin-top: 14px;">
@@ -431,6 +441,7 @@ def generate(database: Path, output_path: Path) -> None:
 const schemas = {schema_json};
 const blobs = {blobs_json};
 const metrics = {metrics_json};
+const forcedTargetTypes = {forced_target_json};
 const versionSelect = document.querySelector("#version");
 const schemaSearch = document.querySelector("#schema-search");
 const schemaResults = document.querySelector("[data-schema-results]");
@@ -440,7 +451,7 @@ const mappingTable = document.querySelector("[data-mapping-table]");
 const forceNote = document.querySelector("#force-note");
 const migrationTime = document.querySelector("#migration-time");
 const eventLog = document.querySelector("[data-event-log]");
-let selectedForcedFields = new Set();
+let selectedForcedFields = new Map();
 
 document.querySelector('[data-metric="cohort"]').textContent = metrics.cohort;
 document.querySelector('[data-metric="missing"]').textContent = metrics.missing;
@@ -491,18 +502,30 @@ function renderMappings() {{
       target: "No governed target",
       reason: "The local schema subset has no mapping for this field."
     }};
+    const options = forcedTargetTypes.map((targetType) => `<option value="${{targetType}}">${{targetType}}</option>`).join("");
     return `<tr>
       <td><code>${{field}}</code></td>
       <td>${{pill(support.status)}}</td>
       <td>${{support.target}}</td>
+      <td><select data-force-target="${{field}}" disabled>${{options}}</select></td>
       <td>${{support.reason}}</td>
       <td><input type="checkbox" data-force-field="${{field}}" aria-label="Force ${{field}}"></td>
     </tr>`;
   }}).join("");
   document.querySelectorAll("[data-force-field]").forEach((checkbox) => {{
+    const field = checkbox.getAttribute("data-force-field");
+    const targetSelect = document.querySelector(`[data-force-target="${{field}}"]`);
     checkbox.addEventListener("change", () => {{
-      if (checkbox.checked) selectedForcedFields.add(checkbox.getAttribute("data-force-field"));
-      else selectedForcedFields.delete(checkbox.getAttribute("data-force-field"));
+      targetSelect.disabled = !checkbox.checked;
+      if (checkbox.checked) selectedForcedFields.set(field, targetSelect.value);
+      else selectedForcedFields.delete(field);
+      renderDelta(false);
+    }});
+  }});
+  document.querySelectorAll("[data-force-target]").forEach((targetSelect) => {{
+    targetSelect.addEventListener("change", () => {{
+      const field = targetSelect.getAttribute("data-force-target");
+      if (selectedForcedFields.has(field)) selectedForcedFields.set(field, targetSelect.value);
     }});
   }});
   renderDelta(false);
@@ -543,8 +566,8 @@ document.querySelector("[data-migrate]").addEventListener("click", () => {{
     log("forced conversion blocked: note is required");
     return;
   }}
-  const forced = Array.from(selectedForcedFields);
-  log(`recorded migration decision to ${{versionSelect.value}} effective ${{migrationTime.value}} for ${{activeBlob().id}}; forced_fields=${{forced.join(",") || "none"}}; note=${{forceNote.value.trim() || "not forced"}}`);
+  const forced = Array.from(selectedForcedFields.entries()).map(([field, target]) => `${{field}}->${{target}}`);
+  log(`recorded migration decision to ${{versionSelect.value}} effective ${{migrationTime.value}} for ${{activeBlob().id}}; forced_mappings=${{forced.join(",") || "none"}}; note=${{forceNote.value.trim() || "not forced"}}`);
 }});
 
 renderBlobOptions();

@@ -802,6 +802,13 @@
       padding: 14px;
       margin-bottom: 16px;
     }
+    .control-run {
+      border: 1px solid rgba(50, 213, 131, 0.28);
+      border-radius: 8px;
+      background: rgba(50, 213, 131, 0.07);
+      padding: 14px;
+      margin-bottom: 16px;
+    }
     .run-header {
       display: flex;
       align-items: center;
@@ -816,7 +823,7 @@
     .run-header p {
       font-size: 12px;
     }
-    .run-action {
+    .run-action, .control-action {
       border: 1px solid rgba(24, 213, 238, 0.36);
       background: rgba(24, 213, 238, 0.11);
       color: #d7fbff;
@@ -827,13 +834,25 @@
       padding: 8px 11px;
       white-space: nowrap;
     }
-    .run-action:hover {
+    .control-action {
+      border-color: rgba(50, 213, 131, 0.42);
+      background: rgba(50, 213, 131, 0.12);
+      color: #d9ffe9;
+    }
+    .run-action:hover, .control-action:hover {
       border-color: rgba(24, 213, 238, 0.72);
       background: rgba(24, 213, 238, 0.18);
     }
-    .run-action:disabled {
+    .run-action:disabled, .control-action:disabled {
       cursor: wait;
       opacity: 0.62;
+    }
+    .control-command {
+      display: block;
+      margin-top: 10px;
+      color: #b7f5ff;
+      font-size: 12px;
+      overflow-wrap: anywhere;
     }
     .run-progress {
       height: 10px;
@@ -1633,6 +1652,16 @@
             <div class="stage-card" data-stage-card="promote"><span>04 promote</span><strong>waiting</strong><p>Gold gate pending</p></div>
           </div>
         </section>
+        <section class="control-run" aria-label="Local synthetic load control">
+          <div class="run-header">
+            <div>
+              <h3>Local Synthetic Load Control</h3>
+              <p>When served through the local control server, this button runs the next synthetic micro-batch load and refreshes reports. Direct file/GitHub preview stays read-only.</p>
+              <code class="control-command">uv run python -m scripts.dashboard_control_server</code>
+            </div>
+            <button class="control-action" type="button" data-real-load>Run next synthetic load</button>
+          </div>
+        </section>
         <table class="modal-table">
           <thead><tr><th>Pipeline</th><th>Status</th><th>Signal</th><th>Action</th></tr></thead>
           <tbody>
@@ -1653,6 +1682,7 @@
     const log = document.querySelector("[data-event-log]");
     const tooltip = document.querySelector("[data-floating-tooltip]");
     const liveRunButton = document.querySelector("[data-live-run]");
+    const realLoadButton = document.querySelector("[data-real-load]");
     const runProgress = document.querySelector("[data-run-progress]");
     const stageCards = Array.from(document.querySelectorAll("[data-stage-card]"));
     const archiveButton = document.querySelector("[data-archive-quarantine]");
@@ -1938,6 +1968,25 @@
       liveRunButton.textContent = "Run slow monitor";
     }
 
+    async function runRealSyntheticLoad() {
+      realLoadButton.disabled = true;
+      realLoadButton.textContent = "Running local load...";
+      log.textContent = `${new Date().toLocaleTimeString()} real load requested: calling local dashboard control server.`;
+      try {
+        const response = await fetch("/api/load-next-batch", { method: "POST" });
+        const payload = await response.json();
+        if (!payload.ok) {
+          throw new Error(payload.failed_command || "local load failed");
+        }
+        log.textContent = `${new Date().toLocaleTimeString()} real load complete: load #${payload.load_number}, ${payload.patient_count} synthetic patients. Refresh this page to view regenerated marts and reports.`;
+      } catch (error) {
+        log.textContent = `${new Date().toLocaleTimeString()} real load unavailable: start the local server with 'uv run python -m scripts.dashboard_control_server', then open http://127.0.0.1:8765/. Detail: ${error.message}`;
+      } finally {
+        realLoadButton.disabled = false;
+        realLoadButton.textContent = "Run next synthetic load";
+      }
+    }
+
     document.querySelector("[data-open-monitor]").addEventListener("click", openMonitorModal);
     document.querySelector("[data-close-monitor]").addEventListener("click", () => {
       modal.classList.remove("open");
@@ -1974,6 +2023,7 @@
       });
     });
     liveRunButton.addEventListener("click", runSlowMonitor);
+    realLoadButton.addEventListener("click", runRealSyntheticLoad);
   </script>
 </body>
 </html>

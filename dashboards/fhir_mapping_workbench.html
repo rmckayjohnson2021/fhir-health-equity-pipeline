@@ -247,7 +247,7 @@
     <section class="panel wide">
       <h2>Mapping Candidates</h2>
       <table>
-        <thead><tr><th>Source field</th><th>Status</th><th>Proposed target</th><th>Reason</th><th>Force</th></tr></thead>
+        <thead><tr><th>Source field</th><th>Status</th><th>Proposed target</th><th>Allowed forced FHIR type</th><th>Reason</th><th>Force</th></tr></thead>
         <tbody data-mapping-table></tbody>
       </table>
       <div class="control-row" style="margin-top: 14px;">
@@ -294,6 +294,7 @@
 const schemas = {"R4": {"mappingSupport": {"diabetes_followup_requested": {"reason": "Can inform outreach, but not structured as a gold care-gap signal in the local R4 profile.", "status": "candidate", "target": "Communication"}, "food_access_text": {"reason": "No local R4 profile exists for this narrative SDOH field.", "status": "blocked", "target": "Extension"}, "housing_status_text": {"reason": "No local R4 profile exists for this narrative SDOH field.", "status": "blocked", "target": "Extension"}, "transportation_barrier": {"reason": "Can be represented only as a governed local Observation candidate.", "status": "candidate", "target": "Observation"}}, "release": "4.0", "resources": {"Communication": ["id", "status", "subject", "medium", "sent"], "Observation": ["id", "status", "code", "subject", "effectiveDateTime", "valueQuantity"], "Patient": ["id", "name", "gender", "birthDate", "address.postalCode", "communication.language"]}, "status": "Older baseline profile"}, "R4B": {"mappingSupport": {"diabetes_followup_requested": {"reason": "Needs a governed target choice before promotion.", "status": "candidate", "target": "ServiceRequest or Communication"}, "food_access_text": {"reason": "R4B bridge profile can retain the screening answer as structured questionnaire content.", "status": "candidate", "target": "QuestionnaireResponse.item.answer"}, "housing_status_text": {"reason": "R4B bridge profile can retain the screening answer as structured questionnaire content.", "status": "candidate", "target": "QuestionnaireResponse.item.answer"}, "transportation_barrier": {"reason": "Local profile allows a social-history Observation candidate.", "status": "supported", "target": "Observation.category=social-history"}}, "release": "4.3", "resources": {"Observation": ["id", "status", "category", "code", "subject", "effectiveDateTime", "valueQuantity", "note"], "Patient": ["id", "name", "gender", "birthDate", "address.postalCode", "communication.language"], "QuestionnaireResponse": ["id", "status", "subject", "authored", "item.linkId", "item.answer"]}, "status": "Bridge profile"}, "R5": {"mappingSupport": {"diabetes_followup_requested": {"reason": "Local R5 profile can promote this to a future follow-up signal after stewardship approval.", "status": "supported", "target": "ServiceRequest.reason"}, "food_access_text": {"reason": "Local R5 profile supports retaining narrative screening answers for downstream semantic mapping.", "status": "supported", "target": "QuestionnaireResponse.item.answer"}, "housing_status_text": {"reason": "Local R5 profile supports retaining narrative screening answers for downstream semantic mapping.", "status": "supported", "target": "QuestionnaireResponse.item.answer"}, "transportation_barrier": {"reason": "Local R5 profile supports this as a structured social-history signal.", "status": "supported", "target": "Observation.category=social-history"}}, "release": "5.0", "resources": {"Observation": ["id", "status", "category", "code", "subject", "effectiveDateTime", "valueQuantity", "note", "triggeredBy"], "Patient": ["id", "name", "gender", "birthDate", "address.postalCode", "communication.language"], "QuestionnaireResponse": ["id", "status", "subject", "authored", "item.linkId", "item.answer"], "ServiceRequest": ["id", "status", "intent", "subject", "reason", "occurrence"]}, "status": "Expanded trial-use profile"}};
 const blobs = [{"care_gap_delta": 1, "fields": {"food_access_text": "sometimes runs out before month end", "housing_status_text": "temporarily staying with family", "mapping_note": "Candidate for future Observation or QuestionnaireResponse mapping."}, "id": "screening-export-001", "label": "SDOH screening export", "source_system": "legacy_pms_simulated"}, {"care_gap_delta": 1, "fields": {"diabetes_followup_requested": "diabetes follow-up requested", "transportation_barrier": "transportation barrier noted"}, "id": "referral-fax-001", "label": "Referral summary text", "source_system": "athena_simulated"}, {"care_gap_delta": 0, "fields": {"food_access_text": "patient reports food insecurity", "preferred_outreach_window": "prefers evening outreach"}, "id": "care-manager-note-001", "label": "Care manager note", "source_system": "epic_simulated"}];
 const metrics = {"cohort": 60, "missing": 26, "rate": 43.3, "unmapped": 3};
+const forcedTargetTypes = ["Observation", "QuestionnaireResponse", "ServiceRequest", "Communication", "DocumentReference", "Extension", "Basic"];
 const versionSelect = document.querySelector("#version");
 const schemaSearch = document.querySelector("#schema-search");
 const schemaResults = document.querySelector("[data-schema-results]");
@@ -303,7 +304,7 @@ const mappingTable = document.querySelector("[data-mapping-table]");
 const forceNote = document.querySelector("#force-note");
 const migrationTime = document.querySelector("#migration-time");
 const eventLog = document.querySelector("[data-event-log]");
-let selectedForcedFields = new Set();
+let selectedForcedFields = new Map();
 
 document.querySelector('[data-metric="cohort"]').textContent = metrics.cohort;
 document.querySelector('[data-metric="missing"]').textContent = metrics.missing;
@@ -354,18 +355,30 @@ function renderMappings() {
       target: "No governed target",
       reason: "The local schema subset has no mapping for this field."
     };
+    const options = forcedTargetTypes.map((targetType) => `<option value="${targetType}">${targetType}</option>`).join("");
     return `<tr>
       <td><code>${field}</code></td>
       <td>${pill(support.status)}</td>
       <td>${support.target}</td>
+      <td><select data-force-target="${field}" disabled>${options}</select></td>
       <td>${support.reason}</td>
       <td><input type="checkbox" data-force-field="${field}" aria-label="Force ${field}"></td>
     </tr>`;
   }).join("");
   document.querySelectorAll("[data-force-field]").forEach((checkbox) => {
+    const field = checkbox.getAttribute("data-force-field");
+    const targetSelect = document.querySelector(`[data-force-target="${field}"]`);
     checkbox.addEventListener("change", () => {
-      if (checkbox.checked) selectedForcedFields.add(checkbox.getAttribute("data-force-field"));
-      else selectedForcedFields.delete(checkbox.getAttribute("data-force-field"));
+      targetSelect.disabled = !checkbox.checked;
+      if (checkbox.checked) selectedForcedFields.set(field, targetSelect.value);
+      else selectedForcedFields.delete(field);
+      renderDelta(false);
+    });
+  });
+  document.querySelectorAll("[data-force-target]").forEach((targetSelect) => {
+    targetSelect.addEventListener("change", () => {
+      const field = targetSelect.getAttribute("data-force-target");
+      if (selectedForcedFields.has(field)) selectedForcedFields.set(field, targetSelect.value);
     });
   });
   renderDelta(false);
@@ -406,8 +419,8 @@ document.querySelector("[data-migrate]").addEventListener("click", () => {
     log("forced conversion blocked: note is required");
     return;
   }
-  const forced = Array.from(selectedForcedFields);
-  log(`recorded migration decision to ${versionSelect.value} effective ${migrationTime.value} for ${activeBlob().id}; forced_fields=${forced.join(",") || "none"}; note=${forceNote.value.trim() || "not forced"}`);
+  const forced = Array.from(selectedForcedFields.entries()).map(([field, target]) => `${field}->${target}`);
+  log(`recorded migration decision to ${versionSelect.value} effective ${migrationTime.value} for ${activeBlob().id}; forced_mappings=${forced.join(",") || "none"}; note=${forceNote.value.trim() || "not forced"}`);
 });
 
 renderBlobOptions();

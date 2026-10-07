@@ -118,6 +118,14 @@ Explain:
 - It then refreshes dbt models, triage, and the dashboard.
 - This demonstrates incremental processing without adding Kafka or orchestration infrastructure to v1.
 
+Optional local button mode:
+
+```powershell
+uv run python -m scripts.dashboard_control_server
+```
+
+Open `http://127.0.0.1:8765/`, click `Open pipeline monitor`, then click `Run next synthetic load`. Each click advances to the next synthetic panel size and refreshes reports and dashboards from the local pipeline.
+
 To slow the run down further:
 
 ```powershell
@@ -220,6 +228,7 @@ Explain:
 - Operators can select an unmapped blob, inspect candidate mappings, and see whether a field is blocked, candidate-only, or supported under the selected version.
 - The `Simulate but do not apply` button shows a projected care-gap signal change without changing data.
 - The migration decision control requires an effective timestamp; forced mappings require an audit note.
+- Forced mappings can choose a target FHIR type such as Observation, QuestionnaireResponse, ServiceRequest, Communication, DocumentReference, Extension, or Basic.
 - The version labels follow HL7's published sequence: R4 `4.0`, R4B `4.3`, and R5 `5.0`.
 
 ### 10. Scenario-Rich Data
