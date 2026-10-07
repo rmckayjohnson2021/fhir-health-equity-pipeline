@@ -8,6 +8,16 @@ import subprocess
 from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from typing import Any
+from urllib.parse import urlparse
+
+from scripts.fhir_version_policy import (
+    DEFAULT_POLICY_PATH,
+    DEFAULT_REPORT_PATH,
+    load_policy,
+    record_policy,
+    revert_policy,
+    write_report,
+)
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -66,6 +76,7 @@ def run_synthetic_load(batch_size: int, delay_seconds: float) -> dict[str, Any]:
         ["uv", "run", "dbt", "build", "--profiles-dir", "../dbt_profiles"],
         ["uv", "run", "python", "-m", "scripts.triage_quality_failures"],
         ["uv", "run", "python", "-m", "scripts.review_gold_promotion"],
+        ["uv", "run", "python", "-m", "scripts.fhir_version_policy", "--report-only"],
         ["uv", "run", "python", "-m", "scripts.generate_dashboard_preview"],
         ["uv", "run", "python", "-m", "scripts.generate_fhir_mapping_workbench"],
         ["uv", "run", "python", "-m", "scripts.generate_privacy_report"],
@@ -93,25 +104,66 @@ class DashboardControlHandler(SimpleHTTPRequestHandler):
         self.delay_seconds = delay_seconds
         super().__init__(*args, directory=str(ROOT), **kwargs)
 
-    def do_GET(self) -> None:
-        if self.path in {"/", ""}:
-            self.send_response(302)
-            self.send_header("Location", "/dashboards/static_preview.html?view=process&health=closed")
-            self.end_headers()
-            return
-        super().do_GET()
-
-    def do_POST(self) -> None:
-        if self.path != "/api/load-next-batch":
-            self.send_error(404, "Unknown control endpoint")
-            return
-        payload = run_synthetic_load(self.batch_size, self.delay_seconds)
+    def send_json(self, payload: dict[str, Any], status: int = 200) -> None:
         body = json.dumps(payload, indent=2).encode("utf-8")
-        self.send_response(200 if payload["ok"] else 500)
+        self.send_response(status)
         self.send_header("Content-Type", "application/json")
         self.send_header("Content-Length", str(len(body)))
         self.end_headers()
         self.wfile.write(body)
+
+    def read_json_body(self) -> dict[str, Any]:
+        length = int(self.headers.get("Content-Length", "0"))
+        if length <= 0:
+            return {}
+        raw_body = self.rfile.read(length).decode("utf-8")
+        return json.loads(raw_body)
+
+    def do_GET(self) -> None:
+        parsed_path = urlparse(self.path).path
+        if parsed_path in {"/", ""}:
+            self.send_response(302)
+            self.send_header("Location", "/dashboards/static_preview.html?view=process&health=closed")
+            self.end_headers()
+            return
+        if parsed_path == "/api/fhir-version-policy":
+            policy = load_policy(DEFAULT_POLICY_PATH)
+            write_report(policy, DEFAULT_REPORT_PATH)
+            self.send_json({"ok": True, "policy": policy, "report": str(DEFAULT_REPORT_PATH.relative_to(ROOT))})
+            return
+        super().do_GET()
+
+    def do_POST(self) -> None:
+        parsed_path = urlparse(self.path).path
+        if parsed_path == "/api/fhir-version-policy":
+            try:
+                body = self.read_json_body()
+                if body.get("action") == "revert":
+                    policy = revert_policy(
+                        effective_at=body.get("effective_at"),
+                        note=body.get("note", ""),
+                        path=DEFAULT_POLICY_PATH,
+                    )
+                else:
+                    policy = record_policy(
+                        version=body.get("version", "R4"),
+                        mode=body.get("mode", "apply_forward"),
+                        effective_at=body.get("effective_at"),
+                        note=body.get("note", ""),
+                        forced_mappings=body.get("forced_mappings", []),
+                        path=DEFAULT_POLICY_PATH,
+                    )
+                write_report(policy, DEFAULT_REPORT_PATH)
+                self.send_json({"ok": True, "policy": policy, "report": str(DEFAULT_REPORT_PATH.relative_to(ROOT))})
+            except (json.JSONDecodeError, ValueError) as error:
+                self.send_json({"ok": False, "error": str(error)}, status=400)
+            return
+
+        if parsed_path != "/api/load-next-batch":
+            self.send_error(404, "Unknown control endpoint")
+            return
+        payload = run_synthetic_load(self.batch_size, self.delay_seconds)
+        self.send_json(payload, status=200 if payload["ok"] else 500)
 
 
 def parse_args() -> argparse.Namespace:
@@ -137,7 +189,12 @@ def main() -> None:
     server = ThreadingHTTPServer((args.host, args.port), handler)
     print(f"Serving dashboard controls at http://{args.host}:{args.port}/")
     print("Press Ctrl+C to stop.")
-    server.serve_forever()
+    try:
+        server.serve_forever()
+    except KeyboardInterrupt:
+        print("\nDashboard control server stopped.")
+    finally:
+        server.server_close()
 
 
 if __name__ == "__main__":

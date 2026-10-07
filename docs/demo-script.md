@@ -229,6 +229,8 @@ Explain:
 - The `Simulate but do not apply` button shows a projected care-gap signal change without changing data.
 - The migration decision control requires an effective timestamp; forced mappings require an audit note.
 - Forced mappings can choose a target FHIR type such as Observation, QuestionnaireResponse, ServiceRequest, Communication, DocumentReference, Extension, or Basic.
+- If the workbench is opened through `uv run python -m scripts.dashboard_control_server`, migration decisions persist as a local future-effective policy and refresh `reports/fhir_version_policy.md`.
+- Revert records a new policy for future loads; it does not rewrite previous pipeline runs.
 - The version labels follow HL7's published sequence: R4 `4.0`, R4B `4.3`, and R5 `5.0`.
 
 ### 10. Scenario-Rich Data

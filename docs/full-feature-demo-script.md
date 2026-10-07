@@ -261,6 +261,8 @@ Show:
 - Use `Simulate but do not apply`.
 - Try a forced conversion without a note.
 - Add a note and record the simulated decision.
+- Start `uv run python -m scripts.dashboard_control_server`, reopen the workbench from `http://127.0.0.1:8765/dashboards/fhir_mapping_workbench.html`, and record a decision to persist a local policy.
+- Click `Revert policy for future loads`.
 
 Explain:
 
@@ -268,6 +270,8 @@ Explain:
 - R5 can support mappings that are blocked or candidate-only in older profiles.
 - Simulation shows projected care-gap impact without changing data.
 - Forced conversions require an audit note and a selected target FHIR type.
+- Persisted migration decisions are timestamp-forward only. Previous runs stay unchanged unless an explicit replay/backfill is run.
+- Revert is also a recorded future-effective policy decision, not a hidden edit of history.
 
 ## 12. Demonstrate Scenario-Rich Data
 

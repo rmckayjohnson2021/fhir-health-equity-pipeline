@@ -266,6 +266,21 @@ def generate(database: Path, output_path: Path) -> None:
     }}
     button:hover {{ background: rgba(24, 213, 238, 0.2); }}
     .button-row {{ display: flex; flex-wrap: wrap; gap: 10px; margin-top: 12px; }}
+    .policy-note {{
+      display: grid;
+      grid-template-columns: 1.4fr 0.6fr;
+      gap: 14px;
+      align-items: center;
+    }}
+    .policy-status {{
+      margin: 0;
+      padding: 12px;
+      border: 1px solid var(--line-soft);
+      border-radius: 8px;
+      background: #09101a;
+      color: #cfefff;
+      font-size: 13px;
+    }}
     .delta {{
       display: grid;
       grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -345,7 +360,7 @@ def generate(database: Path, output_path: Path) -> None:
       font-size: 13px;
     }}
     @media (max-width: 920px) {{
-      .metrics, .grid, .control-row, .delta {{ grid-template-columns: 1fr; }}
+      .metrics, .grid, .control-row, .delta, .policy-note {{ grid-template-columns: 1fr; }}
     }}
   </style>
 </head>
@@ -362,6 +377,17 @@ def generate(database: Path, output_path: Path) -> None:
     <div class="metric"><span>Current care gap signals</span><strong data-metric="missing"></strong></div>
     <div class="metric"><span>Current gap rate</span><strong data-metric="rate"></strong></div>
     <div class="metric"><span>Unmapped blobs</span><strong data-metric="unmapped"></strong></div>
+  </section>
+
+  <section class="panel wide" style="margin-bottom: 18px;">
+    <h2>FHIR Version Policy</h2>
+    <div class="policy-note">
+      <p class="policy-status" data-policy-status>Static preview: version choices are browser-only unless the local dashboard control server is running.</p>
+      <div class="button-row">
+        <button type="button" data-revert-policy>Revert policy for future loads</button>
+      </div>
+    </div>
+    <p>Simulation does not change data. A recorded migration applies from the selected timestamp forward; previous pipeline runs remain unchanged unless an explicit replay/backfill is run.</p>
   </section>
 
   <section class="grid">
@@ -451,6 +477,8 @@ const mappingTable = document.querySelector("[data-mapping-table]");
 const forceNote = document.querySelector("#force-note");
 const migrationTime = document.querySelector("#migration-time");
 const eventLog = document.querySelector("[data-event-log]");
+const policyStatus = document.querySelector("[data-policy-status]");
+const revertPolicyButton = document.querySelector("[data-revert-policy]");
 let selectedForcedFields = new Map();
 
 document.querySelector('[data-metric="cohort"]').textContent = metrics.cohort;
@@ -550,6 +578,29 @@ function log(message) {{
   eventLog.textContent = `${{timestamp}} ${{message}}\\n` + eventLog.textContent;
 }}
 
+async function requestPolicy(payload) {{
+  const response = await fetch("/api/fhir-version-policy", {{
+    method: "POST",
+    headers: {{ "Content-Type": "application/json" }},
+    body: JSON.stringify(payload)
+  }});
+  const body = await response.json();
+  if (!response.ok || !body.ok) throw new Error(body.error || "policy request failed");
+  return body;
+}}
+
+async function loadPolicy() {{
+  try {{
+    const response = await fetch("/api/fhir-version-policy");
+    if (!response.ok) throw new Error("policy endpoint unavailable");
+    const body = await response.json();
+    const policy = body.policy;
+    policyStatus.textContent = `Local policy active: ${{policy.active_version}} / ${{policy.mode}} / effective ${{policy.effective_at || "not applied"}}. Previous runs remain unchanged; policy report: ${{body.report}}.`;
+  }} catch (error) {{
+    policyStatus.textContent = "Static preview: decisions are browser-only. Start `uv run python -m scripts.dashboard_control_server` and open http://127.0.0.1:8765/ to persist FHIR version policy decisions.";
+  }}
+}}
+
 versionSelect.addEventListener("change", () => {{ renderSchema(); renderMappings(); renderBlob(); }});
 schemaSearch.addEventListener("input", renderSchema);
 blobSelect.addEventListener("change", () => {{ renderBlob(); renderMappings(); }});
@@ -557,7 +608,7 @@ document.querySelector("[data-simulate]").addEventListener("click", () => {{
   renderDelta(true);
   log(`simulated ${{versionSelect.value}} migration for ${{activeBlob().id}}; no data was changed`);
 }});
-document.querySelector("[data-migrate]").addEventListener("click", () => {{
+document.querySelector("[data-migrate]").addEventListener("click", async () => {{
   if (!migrationTime.value) {{
     log("migration decision blocked: timestamp is required");
     return;
@@ -568,12 +619,43 @@ document.querySelector("[data-migrate]").addEventListener("click", () => {{
   }}
   const forced = Array.from(selectedForcedFields.entries()).map(([field, target]) => `${{field}}->${{target}}`);
   log(`recorded migration decision to ${{versionSelect.value}} effective ${{migrationTime.value}} for ${{activeBlob().id}}; forced_mappings=${{forced.join(",") || "none"}}; note=${{forceNote.value.trim() || "not forced"}}`);
+  try {{
+    const body = await requestPolicy({{
+      action: "record",
+      version: versionSelect.value,
+      mode: "apply_forward",
+      effective_at: migrationTime.value,
+      note: forceNote.value.trim() || `Approved ${{versionSelect.value}} for future synthetic loads.`,
+      forced_mappings: Array.from(selectedForcedFields.entries()).map(([field, targetType]) => ({{
+        field,
+        target_type: targetType
+      }}))
+    }});
+    policyStatus.textContent = `Persisted local policy: ${{body.policy.active_version}} effective ${{body.policy.effective_at}}. Report: ${{body.report}}.`;
+    log(`persisted FHIR version policy to ${{body.report}}; applies from timestamp forward`);
+  }} catch (error) {{
+    log(`policy persistence skipped: start dashboard_control_server to persist local decisions. Detail: ${{error.message}}`);
+  }}
+}});
+revertPolicyButton.addEventListener("click", async () => {{
+  try {{
+    const body = await requestPolicy({{
+      action: "revert",
+      effective_at: new Date().toISOString(),
+      note: "Reverted from mapping workbench for future synthetic loads."
+    }});
+    policyStatus.textContent = `Reverted local policy to ${{body.policy.active_version}} for future loads. Previous runs remain unchanged. Report: ${{body.report}}.`;
+    log(`reverted FHIR version policy for future loads; report=${{body.report}}`);
+  }} catch (error) {{
+    log(`policy revert unavailable: start dashboard_control_server to use local persistence. Detail: ${{error.message}}`);
+  }}
 }});
 
 renderBlobOptions();
 renderSchema();
 renderBlob();
 renderMappings();
+loadPolicy();
 </script>
 </body>
 </html>

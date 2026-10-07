@@ -43,6 +43,7 @@ finally {
 }
 uv run python -m scripts.triage_quality_failures
 uv run python -m scripts.review_gold_promotion
+uv run python -m scripts.fhir_version_policy --report-only
 uv run python -m scripts.generate_dashboard_preview
 uv run python -m scripts.generate_fhir_mapping_workbench
 uv run python -m scripts.generate_privacy_report

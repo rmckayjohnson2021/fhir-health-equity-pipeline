@@ -237,7 +237,7 @@ To open the interactive mapping workbench after a demo run:
 Start-Process .\dashboards\fhir_mapping_workbench.html
 ```
 
-The workbench lets an operator query the local FHIR schema subset, choose R4/R4B/R5, inspect mapping candidates for unmapped blobs, simulate a migration without applying it, and record a forced conversion decision with an audit note. The version labels follow HL7's published FHIR version sequence: R4 `4.0`, R4B `4.3`, and R5 `5.0`.
+The workbench lets an operator query the local FHIR schema subset, choose R4/R4B/R5, inspect mapping candidates for unmapped blobs, simulate a migration without applying it, and record a forced conversion decision with an audit note. When served through `scripts/dashboard_control_server.py`, migration decisions persist to `data/work/fhir_version_policy.json` and refresh `reports/fhir_version_policy.md`. Version changes apply from the selected timestamp forward; previous pipeline runs remain immutable unless an explicit replay/backfill is run. The version labels follow HL7's published FHIR version sequence: R4 `4.0`, R4B `4.3`, and R5 `5.0`.
 
 To generate dbt catalog and lineage artifacts locally:
 
@@ -261,10 +261,11 @@ Start with the runnable path, then read the platform story around it:
 8. `dbt_transforms/models/schema.yml` and `dbt_transforms/tests/` define the quality gates.
 9. `scripts/triage_quality_failures.py` converts dbt artifacts and quarantine metrics into a Markdown report.
 10. `scripts/version_data_release.py` snapshots successful runs as local last-known-good releases.
-11. `dashboards/metabase_sql/` contains saved SQL questions for dashboarding.
-12. `dashboards/static_preview.html` provides a generated stakeholder-facing dashboard preview.
-13. `dashboards/fhir_mapping_workbench.html` provides an interactive version-aware mapping workbench.
-14. `docs/` explains the architecture, tradeoffs, KPIs, cost story, and operating model.
+11. `scripts/fhir_version_policy.py` records local FHIR version decisions and writes a forward-effective policy report.
+12. `dashboards/metabase_sql/` contains saved SQL questions for dashboarding.
+13. `dashboards/static_preview.html` provides a generated stakeholder-facing dashboard preview.
+14. `dashboards/fhir_mapping_workbench.html` provides an interactive version-aware mapping workbench.
+15. `docs/` explains the architecture, tradeoffs, KPIs, cost story, and operating model.
 
 For a guided explanation, read `docs/repo-walkthrough.md`.
 
@@ -289,7 +290,7 @@ Open `dashboards/static_preview.html` after running the demo to view the current
 | Professional dark dashboard | Generated dark dashboard with custom logo, author image, current screenshots, stakeholder-ready copy, and three dashboard views. |
 | Real-time style monitoring | Pipeline Monitor modal includes a slow staged run, restart actions, a local synthetic-load control button, and event log. |
 | Quarantine operations | Invalid records are quarantined, reviewed for gold promotion, and can be dismissed into a simulated archive export. |
-| FHIR version mapping | Workbench supports R4, R4B, and R5 schema lookup, simulation, forced FHIR target types, and forced conversion notes. |
+| FHIR version mapping | Workbench supports R4, R4B, and R5 schema lookup, simulation, forced FHIR target types, forced conversion notes, local policy persistence, and future-effective revert decisions. |
 | Data quality and fidelity | dbt tests, triage report, run fidelity trend, and last-known-good snapshots are included. |
 | Privacy posture | Masked mart and PHI-minimization report demonstrate synthetic-data masking patterns without claiming HIPAA compliance. |
 | Provenance for unmapped blobs | Unmapped source drawer retains blob hashes and semantic hints for future mapping. |
@@ -301,12 +302,14 @@ Open `dashboards/static_preview.html` after running the demo to view the current
 - `dashboards/static_preview.html`: generated dark-theme dashboard preview with hover windows, live monitor simulation, quarantine archive action, run fidelity trend, and sortable/exportable patient detail.
 - `dashboards/fhir_mapping_workbench.html`: interactive local FHIR mapping workbench.
 - `scripts/dashboard_control_server.py`: local-only dashboard server that enables the `Run next synthetic load` button.
+- `scripts/fhir_version_policy.py`: local demo policy recorder for FHIR version selection, forced mappings, and future-effective reverts.
 - `dashboards/screenshots/dashboard-system-health.png`: launch modal screenshot.
 - `dashboards/screenshots/static-preview.png`: screenshot for GitHub preview.
 - `dashboards/screenshots/dashboard-process-view.png`: operational process view screenshot.
 - `dashboards/screenshots/dashboard-detail-view.png`: detailed dashboard screenshot.
 - `dashboards/screenshots/fhir-mapping-workbench.png`: screenshot for the mapping workbench.
 - `reports/data_quality_triage.md`: generated quality and quarantine report.
+- `reports/fhir_version_policy.md`: generated FHIR version policy report for timestamp-forward migration decisions.
 - `reports/gold_promotion_review.md`: generated review queue for data blocked from gold marts.
 - `reports/gold_promotion_decisions.jsonl`: machine-readable promotion decisions.
 - `reports/privacy_masking_report.md`: generated PHI-minimization and masking report.
